@@ -187,13 +187,17 @@ export const normalizeUserData = (
   userData: Record<string, unknown>
 ): UserData => {
   return {
-    isPremium: userData.isPremium || false,
-    premiumExpiryDate: userData.premiumExpiryDate || null,
-    ownedPackages: userData.ownedPackages || {},
-    packageExpiryDates: userData.packageExpiryDates || {},
-    email: userData.email,
-    forumNickname: userData.forumNickname,
-    isBlocked: userData.isBlocked || false,
-    lastUpdated: userData.lastUpdated || Timestamp.now(),
+    isPremium: (userData.isPremium as boolean) || false,
+    premiumExpiryDate: (userData.premiumExpiryDate as Timestamp) || null,
+    ownedPackages:
+      (userData.ownedPackages as Record<PackageType, boolean>) ||
+      ({} as Record<PackageType, boolean>),
+    packageExpiryDates:
+      (userData.packageExpiryDates as Record<PackageType, Timestamp | null>) ||
+      ({} as Record<PackageType, Timestamp | null>),
+    email: userData.email as string | undefined,
+    forumNickname: userData.forumNickname as string | undefined,
+    isBlocked: (userData.isBlocked as boolean) || false,
+    lastUpdated: (userData.lastUpdated as Timestamp) || Timestamp.now(),
   };
 };
