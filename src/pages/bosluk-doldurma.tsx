@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Head from "next/head";
+import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
@@ -14,7 +15,7 @@ interface BoslukDoldurmaDeneme {
   status?: string;
 }
 
-export default function BoslukDoldurmaPage() {
+function BoslukDoldurmaPage() {
   const [denemeler, setDenemeler] = useState<BoslukDoldurmaDeneme[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -204,3 +205,15 @@ export default function BoslukDoldurmaPage() {
     </>
   );
 }
+
+export default dynamic(() => Promise.resolve(BoslukDoldurmaPage), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="d-flex justify-content-center align-items-center"
+      style={{ minHeight: "50vh" }}
+    >
+      <LoadingSpinner />
+    </div>
+  ),
+});
