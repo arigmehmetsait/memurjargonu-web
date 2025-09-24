@@ -1,0 +1,585 @@
+/* Bootstrap ile uyumlu özel stiller */
+:root {
+  --bs-primary: #212121;
+  --bs-secondary: #64748b;
+  --bs-success: #059669;
+  --bs-info: #0891b2;
+  --bs-warning: #d97706;
+  --bs-danger: #dc2626;
+  --bs-light: #f8fafc;
+  --bs-dark: #1e293b;
+  --bs-body-bg: #ffffff;
+  --bs-body-color: #334155;
+}
+
+/* Dark mode desteği */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bs-body-bg: #ffffff;
+    --bs-body-color: #e2e8f0;
+    --bs-light: #1e293b;
+    --bs-dark: #f1f5f9;
+  }
+  
+  .navbar {
+    background-color: var(--bs-primary) !important;
+  }
+  
+  .card {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+  }
+  
+  .form-control {
+    background-color: #334155;
+    border-color: #475569;
+    color: #e2e8f0;
+  }
+  
+  .form-control:focus {
+    background-color: #334155;
+    border-color: var(--bs-primary);
+    color: #e2e8f0;
+  }
+
+  /* Dark mode başlık renkleri */
+  h1, h2, h3, h4, h5, h6 {
+    color: #f1f5f9 !important;
+  }
+
+  .display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+    color: #f1f5f9 !important;
+  }
+
+  .card-title {
+    color: #f1f5f9 !important;
+  }
+
+  /* Dark mode modal başlık renkleri */
+  .modal h1, .modal h2, .modal h3, .modal h4, .modal h5, .modal h6 {
+    color: #f1f5f9 !important;
+  }
+
+  .modal .display-1, .modal .display-2, .modal .display-3, 
+  .modal .display-4, .modal .display-5, .modal .display-6 {
+    color: #f1f5f9 !important;
+  }
+
+  .modal .card-title {
+    color: #f1f5f9 !important;
+  }
+
+  .modal .form-label {
+    color: #f1f5f9 !important;
+  }
+
+  .modal-title {
+    color: #f1f5f9 !important;
+  }
+
+  /* Dark mode input düzenlemeleri */
+  .form-control, .form-select {
+    background-color: #334155 !important;
+    border: 1px solid #475569 !important;
+    color: #e2e8f0 !important;
+  }
+
+  /* Dark mode checkbox düzenlemeleri */
+  .form-check-input {
+    background-color: #334155 !important;
+    border: 2px solid #64748b !important;
+  }
+
+  .form-check-input:checked {
+    background-color: var(--bs-primary) !important;
+    border-color: var(--bs-primary) !important;
+  }
+
+  .form-check-label {
+    color: #e2e8f0 !important;
+  }
+
+  .form-control:focus, .form-select:focus {
+    background-color: #334155 !important;
+    border-color: var(--bs-primary) !important;
+    color: #e2e8f0 !important;
+    box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25) !important;
+  }
+
+  .form-control::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+  }
+
+  .form-control::-webkit-input-placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+  }
+
+  .form-control::-moz-placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+  }
+
+  .form-control:-ms-input-placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+  }
+
+  .form-control:-moz-placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+  }
+
+  /* Dark mode card text düzenlemeleri */
+  .card-text {
+    color: #cbd5e1 !important;
+  }
+
+  .text-muted {
+    color: #94a3b8 !important;
+  }
+}
+
+/* Özel stiller */
+body {
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+/* Başlık renkleri */
+h1, h2, h3, h4, h5, h6 {
+  color: #0f172a !important;
+  font-weight: 600;
+}
+
+.display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+  color: #0f172a !important;
+  font-weight: 700;
+}
+
+.card-title {
+  color: #0f172a !important;
+  font-weight: 600;
+}
+
+/* Lead text düzenlemesi */
+.lead {
+  color: #374151 !important;
+  font-weight: 400;
+}
+
+.navbar-brand {
+  color: white !important;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+.hero-section {
+  background: linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-info) 100%);
+  color: white;
+  padding: 4rem 0;
+}
+
+.feature-card {
+  transition: transform 0.3s ease;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background-color: white;
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.btn-custom {
+  border-radius: 12px;
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.pricing-card {
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+  background-color: white;
+}
+
+.pricing-card:hover {
+  border-color: var(--bs-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.15);
+}
+
+.pricing-card.featured {
+  border-color: var(--bs-primary);
+  position: relative;
+  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.1);
+}
+
+.pricing-card.featured::before {
+  content: "Popüler";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bs-primary);
+  color: white;
+  padding: 0.25rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Admin Card Styles */
+.admin-card {
+  border: none;
+  background-color: white;
+  transition: all 0.3s ease;
+}
+
+.admin-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+}
+
+.admin-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bs-primary), var(--bs-info));
+  border-radius: 16px;
+  color: white;
+  font-size: 1.5rem;
+}
+
+.stat-item {
+  padding: 1rem;
+  border-radius: 12px;
+  background-color: #f8fafc;
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  background-color: #f1f5f9;
+  transform: translateY(-2px);
+}
+
+.stat-item i {
+  font-size: 2rem;
+}
+
+/* Table düzenlemeleri */
+.table {
+  background-color: white !important;
+  border: none;
+}
+
+.table tbody tr {
+  background-color: white !important;
+  border: none;
+}
+
+.table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+.table thead th {
+  border: none;
+  background-color: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Modal düzenlemeleri */
+.modal-content {
+  background-color: white !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15) !important;
+}
+
+.modal-header {
+  background-color: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+.modal-body {
+  background-color: white !important;
+}
+
+.modal-footer {
+  background-color: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+  border-radius: 0 0 16px 16px !important;
+}
+
+.modal-title {
+  color: #1e293b !important;
+  font-weight: 600;
+}
+
+/* Modal içindeki tüm başlıklar */
+.modal h1, .modal h2, .modal h3, .modal h4, .modal h5, .modal h6 {
+  color: #1e293b !important;
+  font-weight: 600;
+}
+
+.modal .display-1, .modal .display-2, .modal .display-3, 
+.modal .display-4, .modal .display-5, .modal .display-6 {
+  color: #1e293b !important;
+  font-weight: 700;
+}
+
+.modal .card-title {
+  color: #1e293b !important;
+  font-weight: 600;
+}
+
+.modal .form-label {
+  color: #1e293b !important;
+  font-weight: 600;
+}
+
+.btn-close {
+  filter: none !important;
+}
+
+/* Card düzenlemeleri */
+.card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background-color: white;
+}
+
+.card-header {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 16px 16px 0 0;
+}
+
+.card-footer {
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0 0 16px 16px;
+}
+
+/* Input düzenlemeleri */
+.form-control, .form-select {
+  background-color: white !important;
+  border: 1px solid #d1d5db !important;
+  color: #1e293b !important;
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: white !important;
+  border-color: var(--bs-primary) !important;
+  color: #1e293b !important;
+  box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25) !important;
+}
+
+/* Checkbox ve Radio düzenlemeleri */
+.form-check-input {
+  background-color: white !important;
+  border: 2px solid #6b7280 !important;
+  width: 1.2em !important;
+  height: 1.2em !important;
+}
+
+.form-check-input:checked {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+}
+
+.form-check-input:focus {
+  border-color: var(--bs-primary) !important;
+  box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25) !important;
+}
+
+.form-check-label {
+  color: #374151 !important;
+  font-weight: 500;
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+.form-control::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1;
+}
+
+.form-control::-webkit-input-placeholder {
+  color: #94a3b8 !important;
+  opacity: 1;
+}
+
+.form-control::-moz-placeholder {
+  color: #94a3b8 !important;
+  opacity: 1;
+}
+
+.form-control:-ms-input-placeholder {
+  color: #94a3b8 !important;
+  opacity: 1;
+}
+
+.form-control:-moz-placeholder {
+  color: #94a3b8 !important;
+  opacity: 1;
+}
+
+/* Button düzenlemeleri */
+.btn {
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  padding: 0.5rem 1rem;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Primary button güçlendirme */
+.btn-primary {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: white !important;
+}
+
+.btn-primary:hover {
+  background-color: #1a1a1a !important;
+  border-color: #1a1a1a !important;
+  color: white !important;
+}
+
+/* Outline button düzenlemeleri */
+.btn-outline-primary {
+  border: 2px solid var(--bs-primary) !important;
+  color: var(--bs-primary) !important;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+  color: white !important;
+}
+
+/* Success button düzenlemeleri */
+.btn-success {
+  background-color: var(--bs-success) !important;
+  border-color: var(--bs-success) !important;
+}
+
+.btn-outline-success {
+  border: 2px solid var(--bs-success) !important;
+  color: var(--bs-success) !important;
+}
+
+/* Danger button düzenlemeleri */
+.btn-danger {
+  background-color: var(--bs-danger) !important;
+  border-color: var(--bs-danger) !important;
+}
+
+.btn-outline-danger {
+  border: 2px solid var(--bs-danger) !important;
+  color: var(--bs-danger) !important;
+}
+
+/* Badge düzenlemeleri */
+.badge {
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 0.4em 0.8em;
+}
+
+/* Form label düzenlemeleri */
+.form-label {
+  color: #374151 !important;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.form-text {
+  color: #6b7280 !important;
+  font-size: 0.875rem;
+}
+
+/* Card text düzenlemeleri */
+.card-text {
+  color: #475569 !important;
+}
+
+.text-muted {
+  color: #6b7280 !important;
+}
+
+/* Profil sayfası özel düzenlemeleri */
+.profile-info p {
+  color: #1e293b !important;
+  font-weight: 500;
+}
+
+.profile-info strong {
+  color: #0f172a !important;
+  font-weight: 600;
+}
+
+.profile-info .text-muted {
+  color: #64748b !important;
+}
+
+/* Card body içindeki tüm metinler için daha koyu renk */
+.card-body p {
+  color: #1e293b !important;
+}
+
+.card-body strong {
+  color: #0f172a !important;
+  font-weight: 600;
+}
+
+.card-body .small {
+  color: #475569 !important;
+}
+
+/* Paket kartları için özel düzenlemeler */
+.package-card .card-title {
+  color: #1e293b !important;
+  font-weight: 600;
+}
+
+.package-card .card-text {
+  color: #475569 !important;
+}
+
+.package-card .small {
+  color: #64748b !important;
+}
+
+/* Responsive düzenlemeler */
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 2rem 0;
+  }
+  
+  .hero-section h1 {
+    font-size: 2rem;
+  }
+  
+  .pricing-card:hover {
+    transform: none;
+  }
+}
