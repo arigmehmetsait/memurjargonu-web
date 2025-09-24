@@ -397,25 +397,15 @@ export default function PDFList() {
                               <td>
                                 {pdf.updatedAt && (
                                   <small className="text-muted">
-                                    {pdf.updatedAt.seconds
-                                      ? new Date(
-                                          pdf.updatedAt.seconds * 1000
-                                        ).toLocaleDateString("tr-TR", {
-                                          day: "2-digit",
-                                          month: "2-digit",
-                                          year: "numeric",
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })
-                                      : new Date(
-                                          pdf.updatedAt
-                                        ).toLocaleDateString("tr-TR", {
-                                          day: "2-digit",
-                                          month: "2-digit",
-                                          year: "numeric",
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })}
+                                    {pdf.updatedAt
+                                      .toDate()
+                                      .toLocaleDateString("tr-TR", {
+                                        day: "2-digit",
+                                        month: "2-digit",
+                                        year: "numeric",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
                                   </small>
                                 )}
                               </td>

@@ -78,7 +78,7 @@ export interface UserData {
 export interface PackageOperationResult {
   success: boolean;
   message: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 /**

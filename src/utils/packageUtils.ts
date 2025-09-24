@@ -58,8 +58,8 @@ export const getActivePackages = (userData: UserData): PackageType[] => {
   const packageStatuses = calculateAllPackageStatuses(userData);
 
   return Object.entries(packageStatuses)
-    .filter(([_, status]) => status.isOwned && !status.isExpired)
-    .map(([packageType, _]) => packageType as PackageType);
+    .filter(([, status]) => status.isOwned && !status.isExpired)
+    .map(([packageType]) => packageType as PackageType);
 };
 
 /**
@@ -69,8 +69,8 @@ export const getExpiredPackages = (userData: UserData): PackageType[] => {
   const packageStatuses = calculateAllPackageStatuses(userData);
 
   return Object.entries(packageStatuses)
-    .filter(([_, status]) => status.isOwned && status.isExpired)
-    .map(([packageType, _]) => packageType as PackageType);
+    .filter(([, status]) => status.isOwned && status.isExpired)
+    .map(([packageType]) => packageType as PackageType);
 };
 
 /**
@@ -183,7 +183,9 @@ export const calculateRemainingTime = (
 /**
  * Kullanıcı verilerini temizler ve normalize eder
  */
-export const normalizeUserData = (userData: any): UserData => {
+export const normalizeUserData = (
+  userData: Record<string, unknown>
+): UserData => {
   return {
     isPremium: userData.isPremium || false,
     premiumExpiryDate: userData.premiumExpiryDate || null,

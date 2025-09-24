@@ -50,6 +50,9 @@ export class PackageService {
       }
 
       const userData = userDoc.data();
+      if (!userData) {
+        throw new Error("Kullanıcı verileri alınamadı");
+      }
       return normalizeUserData(userData);
     } catch (error) {
       console.error("Kullanıcı paketleri getirilemedi:", error);
@@ -73,7 +76,11 @@ export class PackageService {
         throw new Error("Kullanıcı bulunamadı");
       }
 
-      const userData = normalizeUserData(userDoc.data());
+      const rawUserData = userDoc.data();
+      if (!rawUserData) {
+        throw new Error("Kullanıcı verileri alınamadı");
+      }
+      const userData = normalizeUserData(rawUserData);
       const now = Timestamp.now();
       const expiryDate = calculatePackageExpiry(durationHours);
 
@@ -141,7 +148,11 @@ export class PackageService {
         throw new Error("Kullanıcı bulunamadı");
       }
 
-      const userData = normalizeUserData(userDoc.data());
+      const rawUserData = userDoc.data();
+      if (!rawUserData) {
+        throw new Error("Kullanıcı verileri alınamadı");
+      }
+      const userData = normalizeUserData(rawUserData);
 
       if (!userData.ownedPackages[packageType]) {
         throw new Error("Bu paket kullanıcıda mevcut değil");
@@ -204,7 +215,11 @@ export class PackageService {
         throw new Error("Kullanıcı bulunamadı");
       }
 
-      const userData = normalizeUserData(userDoc.data());
+      const rawUserData = userDoc.data();
+      if (!rawUserData) {
+        throw new Error("Kullanıcı verileri alınamadı");
+      }
+      const userData = normalizeUserData(rawUserData);
 
       if (!userData.ownedPackages[packageType]) {
         throw new Error("Bu paket kullanıcıda mevcut değil");

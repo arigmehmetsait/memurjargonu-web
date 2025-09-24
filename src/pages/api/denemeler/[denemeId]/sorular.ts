@@ -48,7 +48,7 @@ export default async function handler(
       if (cevap && secenekler.length > 0) {
         const cevapHarf = cevap.charAt(0); // "B) İlköğretim" -> "B"
         const dogruIndex = secenekler.findIndex(
-          (secenek) => secenek.charAt(0) === cevapHarf
+          (secenek: string) => secenek.charAt(0) === cevapHarf
         );
         if (dogruIndex !== -1) {
           dogruSecenek = dogruIndex;

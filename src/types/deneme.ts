@@ -95,4 +95,13 @@ export const DENEME_API_ENDPOINTS = {
         `/api/admin/genel-denemeler/delete?denemeId=${denemeId}`,
     },
   },
+  dogruyanlis: {
+    list: "/api/dogru-yanlis/list",
+    sorular: (denemeId: string) => `/api/dogru-yanlis/${denemeId}/sorular`,
+    admin: {
+      create: "/api/admin/dogru-yanlis/create",
+      delete: (denemeId: string) =>
+        `/api/admin/dogru-yanlis/delete?denemeId=${denemeId}`,
+    },
+  },
 } as const;
