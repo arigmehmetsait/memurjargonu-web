@@ -15,12 +15,6 @@ export default async function handler(
     // TarihDenemeler koleksiyonundaki tüm denemeleri getir
     const denemelerSnapshot = await adminDb.collection("tarihdenemeler").get();
 
-    console.log(`Bulunan tarih deneme sayısı: ${denemelerSnapshot.size}`);
-    console.log(
-      "Tarih deneme ID'leri:",
-      denemelerSnapshot.docs.map((doc) => doc.id)
-    );
-
     const denemeler = denemelerSnapshot.docs.map((doc) => ({
       id: doc.id,
       name: doc.id,
@@ -38,9 +32,6 @@ export default async function handler(
           .get();
 
         denemeler[i].soruSayisi = soru1Snapshot.size;
-        console.log(
-          `${denemeler[i].id} tarih denemesinde ${soru1Snapshot.size} soru bulundu`
-        );
       } catch (soruError) {
         console.error(
           `${denemeler[i].id} için soru sayısı alınırken hata:`,

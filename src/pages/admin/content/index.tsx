@@ -1,9 +1,12 @@
+import { useRouter } from "next/router";
 import AdminGuard from "@/components/AdminGuard";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Link from "next/link";
 
 export default function ContentManagement() {
+  const router = useRouter();
+
   return (
     <AdminGuard>
       <div className="min-vh-100 bg-light">
@@ -15,6 +18,13 @@ export default function ContentManagement() {
             <div className="col-12">
               {/* Page Header */}
               <div className="text-center mb-5">
+                <button
+                  className="btn btn-outline-secondary mb-3"
+                  onClick={() => router.back()}
+                >
+                  <i className="bi bi-arrow-left me-2"></i>
+                  Geri Dön
+                </button>
                 <h1 className="display-5 fw-bold text-dark mb-3">
                   <i className="bi bi-collection me-3"></i>
                   İçerik Yönetimi

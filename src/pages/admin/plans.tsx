@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
 import { PACKAGE_INFO, PACKAGE_CATEGORIES } from "@/constants/packages";
+import { PackageType } from "@/types/package";
 import Header from "@/components/Header";
 
 type Plan = {
@@ -43,19 +44,76 @@ export default function PlansAdmin() {
     {}
   );
 
+  // Plan key seçenekleri
+  const planKeyOptions = [
+    { value: "", label: "Seçiniz...", disabled: true },
+    {
+      label: "--- KPSS Paketleri ---",
+      disabled: true,
+      value: "",
+    },
+    {
+      value: PackageType.KPSS_FULL,
+      label: "KPSS Tam Paket",
+    },
+    {
+      value: PackageType.KPSS_GUNCEL,
+      label: "KPSS Güncel Bilgiler",
+    },
+    {
+      value: PackageType.KPSS_TARIH,
+      label: "KPSS Tarih",
+    },
+    {
+      value: PackageType.KPSS_VATANDASLIK,
+      label: "KPSS Vatandaşlık",
+    },
+    {
+      value: PackageType.KPSS_COGRAFYA,
+      label: "KPSS Coğrafya",
+    },
+    {
+      label: "--- AGS Paketleri ---",
+      disabled: true,
+      value: "",
+    },
+    {
+      value: PackageType.AGS_FULL,
+      label: "AGS Tam Paket",
+    },
+    {
+      value: PackageType.AGS_MEVZUAT,
+      label: "AGS Mevzuat",
+    },
+    {
+      value: PackageType.AGS_EGITIM_TEMELLERI,
+      label: "AGS Eğitim Temelleri",
+    },
+    {
+      value: PackageType.AGS_COGRAFYA,
+      label: "AGS Coğrafya",
+    },
+    {
+      value: PackageType.AGS_TARIH,
+      label: "AGS Tarih",
+    },
+  ];
+
+  // Plan key'den label'ı bulan helper fonksiyon
+  const getPlanKeyLabel = (key: string) => {
+    const option = planKeyOptions.find(
+      (opt) => opt.value === key && !opt.disabled
+    );
+    return option ? option.label : key;
+  };
+
   // Yeni paket sistemi için state'ler
   const [activeTab, setActiveTab] = useState<"plans" | "packages">("plans");
-
-  const ensureFreshToken = async () => {
-    try {
-      await auth.currentUser?.getIdToken(true);
-    } catch {}
-  };
 
   const load = async () => {
     try {
       setLoading(true);
-      await ensureFreshToken(); // Token yenileme
+      // Token gereksiz - Firestore direkt auth kullanır
       const snap = await getDocs(
         query(collection(db, "plans"), orderBy("index", "asc"))
       );
@@ -76,7 +134,7 @@ export default function PlansAdmin() {
   const toggleActive = async (p: Plan) => {
     try {
       setMsg("Güncelleniyor…");
-      await ensureFreshToken(); // Token yenileme
+      // Token gereksiz - Firestore direkt auth kullanır
       await updateDoc(doc(db, "plans", p.id), { isActive: !p.isActive });
       await load();
       setMsg("Güncellendi ✅");
@@ -90,7 +148,7 @@ export default function PlansAdmin() {
       const price = Number(priceStr);
       if (Number.isNaN(price)) return setMsg("Geçersiz fiyat");
       setMsg("Fiyat güncelleniyor…");
-      await ensureFreshToken(); // Token yenileme
+      // Token gereksiz - Firestore direkt auth kullanır
       await updateDoc(doc(db, "plans", p.id), { price });
       await load();
       setMsg("Güncellendi ✅");
@@ -100,7 +158,17 @@ export default function PlansAdmin() {
   };
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [planToEdit, setPlanToEdit] = useState<Plan | null>(null);
   const [newPlan, setNewPlan] = useState({
+    name: "",
+    price: 0,
+    currency: "TRY",
+    periodMonths: 1,
+    key: "",
+    features: [] as string[],
+  });
+  const [editPlan, setEditPlan] = useState({
     name: "",
     price: 0,
     currency: "TRY",
@@ -117,7 +185,7 @@ export default function PlansAdmin() {
       }
 
       setMsg("Plan ekleniyor…");
-      await ensureFreshToken(); // Token yenileme
+      // Token gereksiz - Firestore direkt auth kullanır
       await addDoc(collection(db, "plans"), {
         key: newPlan.key,
         name: newPlan.name,
@@ -179,7 +247,7 @@ export default function PlansAdmin() {
   const deletePlan = async (plan: Plan) => {
     try {
       setMsg("Plan siliniyor…");
-      await ensureFreshToken(); // Token yenileme
+      // Token gereksiz - Firestore direkt auth kullanır
       await deleteDoc(doc(db, "plans", plan.id));
       await load();
       setMsg("Plan başarıyla silindi ✅");
@@ -219,6 +287,60 @@ export default function PlansAdmin() {
       delete newState[planId];
       return newState;
     });
+  };
+
+  const handleEditPlan = (plan: Plan) => {
+    setPlanToEdit(plan);
+    setEditPlan({
+      name: plan.name,
+      price: plan.price,
+      currency: plan.currency,
+      periodMonths: plan.periodMonths,
+      key: plan.key,
+      features: (plan as any).features || [],
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const updatePlan = async () => {
+    if (!planToEdit) return;
+
+    try {
+      if (
+        !editPlan.name.trim() ||
+        !editPlan.key.trim() ||
+        editPlan.price <= 0
+      ) {
+        setMsg("Lütfen tüm alanları doldurun ve geçerli bir fiyat girin.");
+        return;
+      }
+
+      setMsg("Plan güncelleniyor…");
+      // Token gereksiz - Firestore direkt auth kullanır
+      await updateDoc(doc(db, "plans", planToEdit.id), {
+        name: editPlan.name,
+        price: editPlan.price,
+        currency: editPlan.currency,
+        periodMonths: editPlan.periodMonths,
+        key: editPlan.key,
+        features: editPlan.features,
+      });
+
+      await load();
+      setMsg("Plan başarıyla güncellendi ✅");
+      setIsEditModalOpen(false);
+      setPlanToEdit(null);
+      setEditPlan({
+        name: "",
+        price: 0,
+        currency: "TRY",
+        periodMonths: 1,
+        key: "",
+        features: [],
+      });
+    } catch (e: any) {
+      setMsg(`Hata: ${e?.message || e}`);
+    }
   };
 
   return (
@@ -334,6 +456,10 @@ export default function PlansAdmin() {
                                   <div>
                                     <strong>{plan.name}</strong>
                                     <br />
+                                    <span className="badge bg-light text-dark border me-2">
+                                      {getPlanKeyLabel(plan.key)}
+                                    </span>
+                                    <br />
                                     <small className="text-muted">
                                       ID: {plan.id.slice(0, 8)}...
                                     </small>
@@ -422,6 +548,13 @@ export default function PlansAdmin() {
                                       <i className="bi bi-eye"></i>
                                     </button>
                                     <button
+                                      className="btn btn-outline-info"
+                                      title="Planı Düzenle"
+                                      onClick={() => handleEditPlan(plan)}
+                                    >
+                                      <i className="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button
                                       className={`btn ${
                                         plan.isActive
                                           ? "btn-outline-warning"
@@ -462,7 +595,9 @@ export default function PlansAdmin() {
                         <div className="row text-center">
                           <div className="col-md-3">
                             <div className="small text-muted">Toplam Plan</div>
-                            <div className="fw-bold">{plans.length}</div>
+                            <div className="fw-bold text-dark">
+                              {plans.length}
+                            </div>
                           </div>
                           <div className="col-md-3">
                             <div className="small text-muted">Aktif</div>
@@ -658,7 +793,7 @@ export default function PlansAdmin() {
                     <div className="mb-2">
                       <strong>Plan Adı:</strong>
                       <br />
-                      <span className="h5">{selectedPlan.name}</span>
+                      <span className="h5 text-dark">{selectedPlan.name}</span>
                     </div>
                     <div className="mb-2">
                       <strong>Durum:</strong>
@@ -704,7 +839,13 @@ export default function PlansAdmin() {
                     <div className="mb-2">
                       <strong>Plan Key:</strong>
                       <br />
-                      <code className="text-muted">{selectedPlan.key}</code>
+                      <span className="badge bg-primary me-2">
+                        {getPlanKeyLabel(selectedPlan.key)}
+                      </span>
+                      <br />
+                      <small>
+                        <code className="text-muted">{selectedPlan.key}</code>
+                      </small>
                     </div>
                     <div className="mb-2">
                       <strong>Index:</strong>
@@ -752,22 +893,37 @@ export default function PlansAdmin() {
               <div className="mb-3">
                 <label htmlFor="planKey" className="form-label fw-semibold">
                   <i className="bi bi-key me-2"></i>
-                  Plan Key (Teknik ID)
+                  Plan Key (Paket Türü)
                 </label>
-                <input
-                  type="text"
+                <select
                   id="planKey"
-                  className="form-control"
-                  placeholder="Örn: kpss_premium_package"
+                  className="form-select"
                   value={newPlan.key}
                   onChange={(e) =>
                     setNewPlan({ ...newPlan, key: e.target.value })
                   }
                   required
-                />
+                >
+                  {planKeyOptions.map((option, index) => (
+                    <option
+                      key={index}
+                      value={option.value}
+                      disabled={option.disabled}
+                      style={
+                        option.disabled
+                          ? {
+                              fontWeight: "bold",
+                              backgroundColor: "#f8f9fa",
+                            }
+                          : {}
+                      }
+                    >
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
                 <div className="form-text">
-                  Bu key sistem tarafından kullanılır. Küçük harf ve alt çizgi
-                  kullanın.
+                  Planın hangi paket türü ile ilişkilendirileceğini seçin.
                 </div>
               </div>
 
@@ -891,6 +1047,202 @@ export default function PlansAdmin() {
                 >
                   <i className="bi bi-plus-circle me-1"></i>
                   Plan Ekle
+                </button>
+              </div>
+            </form>
+          </div>
+        </CustomModal>
+
+        {/* Edit Plan Modal */}
+        <CustomModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          title="Plan Düzenle"
+          size="lg"
+        >
+          <div className="p-3">
+            <form onSubmit={(e) => e.preventDefault()}>
+              {/* Plan Name */}
+              <div className="mb-3">
+                <label
+                  htmlFor="editPlanName"
+                  className="form-label fw-semibold"
+                >
+                  <i className="bi bi-tag me-2"></i>
+                  Plan Adı
+                </label>
+                <input
+                  type="text"
+                  id="editPlanName"
+                  className="form-control"
+                  placeholder="Örn: KPSS Premium Paket"
+                  value={editPlan.name}
+                  onChange={(e) =>
+                    setEditPlan({ ...editPlan, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              {/* Plan Key */}
+              <div className="mb-3">
+                <label htmlFor="editPlanKey" className="form-label fw-semibold">
+                  <i className="bi bi-key me-2"></i>
+                  Plan Key (Paket Türü)
+                </label>
+                <select
+                  id="editPlanKey"
+                  className="form-select"
+                  value={editPlan.key}
+                  onChange={(e) =>
+                    setEditPlan({ ...editPlan, key: e.target.value })
+                  }
+                  required
+                >
+                  {planKeyOptions.map((option, index) => (
+                    <option
+                      key={index}
+                      value={option.value}
+                      disabled={option.disabled}
+                      style={
+                        option.disabled
+                          ? {
+                              fontWeight: "bold",
+                              backgroundColor: "#f8f9fa",
+                            }
+                          : {}
+                      }
+                    >
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="form-text">
+                  Planın hangi paket türü ile ilişkilendirileceğini seçin.
+                </div>
+              </div>
+
+              {/* Price and Period */}
+              <div className="row">
+                <div className="col-md-6">
+                  <div className="mb-3">
+                    <label
+                      htmlFor="editPlanPrice"
+                      className="form-label fw-semibold"
+                    >
+                      <i className="bi bi-currency-dollar me-2"></i>
+                      Fiyat (TRY)
+                    </label>
+                    <input
+                      type="number"
+                      id="editPlanPrice"
+                      className="form-control"
+                      min="0"
+                      step="0.01"
+                      value={editPlan.price}
+                      onChange={(e) =>
+                        setEditPlan({
+                          ...editPlan,
+                          price: Number(e.target.value),
+                        })
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="col-md-6">
+                  <div className="mb-3">
+                    <label
+                      htmlFor="editPlanPeriod"
+                      className="form-label fw-semibold"
+                    >
+                      <i className="bi bi-calendar-month me-2"></i>
+                      Süre (Ay)
+                    </label>
+                    <select
+                      id="editPlanPeriod"
+                      className="form-select"
+                      value={editPlan.periodMonths}
+                      onChange={(e) =>
+                        setEditPlan({
+                          ...editPlan,
+                          periodMonths: Number(e.target.value),
+                        })
+                      }
+                    >
+                      <option value={1}>1 Ay</option>
+                      <option value={3}>3 Ay</option>
+                      <option value={6}>6 Ay</option>
+                      <option value={12}>12 Ay</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Currency */}
+              <div className="mb-3">
+                <label
+                  htmlFor="editPlanCurrency"
+                  className="form-label fw-semibold"
+                >
+                  <i className="bi bi-globe me-2"></i>
+                  Para Birimi
+                </label>
+                <select
+                  id="editPlanCurrency"
+                  className="form-select"
+                  value={editPlan.currency}
+                  onChange={(e) =>
+                    setEditPlan({ ...editPlan, currency: e.target.value })
+                  }
+                >
+                  <option value="TRY">TRY (Türk Lirası)</option>
+                  <option value="USD">USD (Amerikan Doları)</option>
+                  <option value="EUR">EUR (Euro)</option>
+                </select>
+              </div>
+
+              {/* Features */}
+              <div className="mb-3">
+                <label className="form-label fw-semibold">
+                  <i className="bi bi-list-check me-2"></i>
+                  Özellikler (Opsiyonel)
+                </label>
+                <div className="form-text mb-2">
+                  Her satıra bir özellik yazın. Boş bırakabilirsiniz.
+                </div>
+                <textarea
+                  className="form-control"
+                  rows={4}
+                  placeholder="Örn:&#10;Sınırsız soru çözümü&#10;Video dersler&#10;PDF materyaller&#10;Canlı destek"
+                  value={editPlan.features.join("\n")}
+                  onChange={(e) => {
+                    const features = e.target.value
+                      .split("\n")
+                      .map((f) => f.trim())
+                      .filter((f) => f.length > 0);
+                    setEditPlan({ ...editPlan, features });
+                  }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="d-flex gap-2 justify-content-end">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
+                  <i className="bi bi-x-circle me-1"></i>
+                  İptal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-warning"
+                  onClick={updatePlan}
+                >
+                  <i className="bi bi-check-circle me-1"></i>
+                  Güncelle
                 </button>
               </div>
             </form>

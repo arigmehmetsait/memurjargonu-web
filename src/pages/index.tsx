@@ -15,12 +15,22 @@ export default function HomePage() {
               <h1 className="display fw-bold mb-4 text-white">
                 KPSS Çalışmanda Premium Destek
               </h1>
-              <p className="lead mb-4" style={{ color: "white !important" }}>
+              <p className="lead mb-4">
                 Güncel haritalar, videolu çözümler, forum ve daha fazlası ile
                 KPSS'ye hazırlan. Premium üyelik ile sağla.
               </p>
               <div className="d-flex gap-3">
-                <Link href="/plans" className="btn btn-light btn-lg btn-custom">
+                <Link
+                  href="/icerikler"
+                  className="btn btn-light btn-lg btn-custom"
+                >
+                  <i className="bi bi-collection me-2"></i>
+                  İçerikleri Gör
+                </Link>
+                <Link
+                  href="/plans"
+                  className="btn btn-outline-light btn-lg btn-custom"
+                >
                   <i className="bi bi-star-fill me-2"></i>
                   Paketleri Gör
                 </Link>

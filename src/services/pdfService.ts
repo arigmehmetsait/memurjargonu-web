@@ -102,8 +102,16 @@ export class PDFService {
       status: data.status || PDFStatus.ACTIVE,
       sortOrder: data.sortOrder || 1,
       tags: data.tags || [],
-      createdAt: data.createdAt || Timestamp.now(),
-      updatedAt: data.updatedAt || Timestamp.now(),
+      createdAt: data.createdAt
+        ? data.createdAt.toDate
+          ? data.createdAt.toDate()
+          : data.createdAt
+        : new Date(),
+      updatedAt: data.updatedAt
+        ? data.updatedAt.toDate
+          ? data.updatedAt.toDate()
+          : data.updatedAt
+        : new Date(),
       createdBy: data.createdBy || "system",
       updatedBy: data.updatedBy || "system",
     } as PDFDocument;
@@ -332,8 +340,8 @@ export class PDFService {
         pdfUrl,
         fileName,
         fileSize,
-        createdAt: now,
-        updatedAt: now,
+        createdAt: now.toDate(),
+        updatedAt: now.toDate(),
         createdBy: adminUserId,
         updatedBy: adminUserId,
       };

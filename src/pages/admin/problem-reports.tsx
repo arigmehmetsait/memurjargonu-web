@@ -6,6 +6,7 @@ import Alert from "@/components/Alert";
 import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { getValidToken } from "@/utils/tokenCache";
 import { useEffect, useState } from "react";
 
 type ProblemReport = {
@@ -23,27 +24,13 @@ export default function ProblemReportsAdmin() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  // Token alma fonksiyonu
-  const getFreshToken = async (): Promise<string> => {
-    if (!auth.currentUser) {
-      await new Promise<void>((resolve) => {
-        const unsub = onAuthStateChanged(auth, () => {
-          unsub();
-          resolve();
-        });
-      });
-    }
-    const token = await auth.currentUser!.getIdToken(true);
-    return token;
-  };
-
   // Problem reports'ları yükle
   const loadReports = async () => {
     setLoading(true);
     setMessage(null);
 
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
 
       const response = await fetch("/api/admin/problem-reports", {
         headers: {
@@ -75,7 +62,7 @@ export default function ProblemReportsAdmin() {
     newStatus: "new" | "in_review" | "resolved"
   ) => {
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
 
       const response = await fetch("/api/admin/problem-reports/status", {
         method: "PATCH",

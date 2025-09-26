@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { Deneme, DenemeType, DENEME_API_ENDPOINTS } from "@/types/deneme";
 import LoadingSpinner from "./LoadingSpinner";
 import ConfirmModal from "./ConfirmModal";
@@ -21,6 +22,7 @@ export default function AdminDenemeTable({
   onEditClick,
   className = "",
 }: AdminDenemeTableProps) {
+  const router = useRouter();
   const [denemeler, setDenemeler] = useState<Deneme[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -236,11 +238,10 @@ export default function AdminDenemeTable({
                           className="btn btn-outline-primary btn-sm"
                           title="Denemeyi Görüntüle (Kullanıcı Görünümü)"
                           onClick={() => {
-                            window.open(
+                            router.push(
                               `/${getDenemeTypePath()}/${encodeURIComponent(
                                 deneme.id
-                              )}`,
-                              "_blank"
+                              )}`
                             );
                           }}
                         >
@@ -251,11 +252,10 @@ export default function AdminDenemeTable({
                         className="btn btn-outline-success btn-sm"
                         title="Soruları Yönet (Admin Görünümü)"
                         onClick={() => {
-                          window.open(
+                          router.push(
                             `/admin/${getDenemeTypePath()}/${encodeURIComponent(
                               deneme.id
-                            )}/sorular`,
-                            "_blank"
+                            )}/sorular`
                           );
                         }}
                       >

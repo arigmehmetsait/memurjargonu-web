@@ -15,12 +15,6 @@ export default async function handler(
     // MevzuatDeneme koleksiyonundaki tüm denemeleri getir
     const denemelerSnapshot = await adminDb.collection("MevzuatDeneme").get();
 
-    console.log(`Bulunan deneme sayısı: ${denemelerSnapshot.size}`);
-    console.log(
-      "Deneme ID'leri:",
-      denemelerSnapshot.docs.map((doc) => doc.id)
-    );
-
     const denemeler = denemelerSnapshot.docs.map((doc) => ({
       id: doc.id,
       name: doc.id,

@@ -7,6 +7,7 @@ import PackageManager from "@/components/PackageManager";
 import ConfirmModal from "@/components/ConfirmModal";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { getValidToken } from "@/utils/tokenCache";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
@@ -25,20 +26,6 @@ type Row = {
   activePackages?: string[];
   totalActivePackages?: number;
 };
-
-async function getFreshToken(): Promise<string> {
-  // auth.currentUser hazır olmayabilir; hazır olana kadar bekle
-  if (!auth.currentUser) {
-    await new Promise<void>((resolve) => {
-      const unsub = onAuthStateChanged(auth, () => {
-        unsub();
-        resolve();
-      });
-    });
-  }
-  const t = await auth.currentUser!.getIdToken(true); // taze token
-  return t;
-}
 
 export default function UsersAdmin() {
   // Premium işlemleri için state'ler
@@ -104,7 +91,7 @@ export default function UsersAdmin() {
     setListLoading(true);
     setMsg(null);
     try {
-      const idToken = await getFreshToken(); // <-- kritik
+      const idToken = await getValidToken(); // Cache'li token
       if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
 
       const params = new URLSearchParams({
@@ -200,7 +187,7 @@ export default function UsersAdmin() {
 
     setEditLoading(true);
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
       if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
 
       const r = await fetch("/api/admin/users/edit", {
@@ -242,7 +229,7 @@ export default function UsersAdmin() {
     setShowBlockConfirm(false);
 
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
       if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
 
       const r = await fetch("/api/admin/users/block", {
@@ -299,7 +286,7 @@ export default function UsersAdmin() {
     setMsg("İşlem gerçekleştiriliyor...");
 
     try {
-      const idToken = await getFreshToken(); // <-- kritik
+      const idToken = await getValidToken(); // Cache'li token
       if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
 
       const r = await fetch("/api/admin/users/premium", {

@@ -105,33 +105,6 @@ export const PDF_CATEGORY_INFO: Record<PDFSubcategory, CategoryInfo> = {
     icon: "bi-calendar-event",
     packageTypes: [PackageType.KPSS_FULL, PackageType.KPSS_GUNCEL],
   },
-
-  [PDFSubcategory.KPSS_MATEMATIK]: {
-    category: PDFCategory.KPSS,
-    subcategory: PDFSubcategory.KPSS_MATEMATIK,
-    name: "Matematik",
-    description: "Temel matematik konuları",
-    icon: "bi-calculator",
-    packageTypes: [PackageType.KPSS_FULL],
-  },
-
-  [PDFSubcategory.KPSS_GEOMETRI]: {
-    category: PDFCategory.KPSS,
-    subcategory: PDFSubcategory.KPSS_GEOMETRI,
-    name: "Geometri",
-    description: "Geometri ve ölçme konuları",
-    icon: "bi-triangle",
-    packageTypes: [PackageType.KPSS_FULL],
-  },
-
-  [PDFSubcategory.KPSS_TURKCE]: {
-    category: PDFCategory.KPSS,
-    subcategory: PDFSubcategory.KPSS_TURKCE,
-    name: "Türkçe",
-    description: "Türk dili ve edebiyatı",
-    icon: "bi-chat-text",
-    packageTypes: [PackageType.KPSS_FULL],
-  },
 };
 
 /**
@@ -182,9 +155,6 @@ export const getFirebaseCollectionName = (
     [PDFSubcategory.KPSS_COGRAFYA]: "KpssCografyaPdf",
     [PDFSubcategory.KPSS_VATANDASLIK]: "KpssVatandaslikPdf",
     [PDFSubcategory.KPSS_GUNCEL]: "KpssGuncelPdf",
-    [PDFSubcategory.KPSS_MATEMATIK]: "KpssMatematikPdf",
-    [PDFSubcategory.KPSS_GEOMETRI]: "KpssGeometriPdf",
-    [PDFSubcategory.KPSS_TURKCE]: "KpssTurkcePdf",
   };
 
   return mapping[subcategory] || `${subcategory}Pdf`;
