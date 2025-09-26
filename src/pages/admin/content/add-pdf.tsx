@@ -9,6 +9,7 @@ import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { getValidToken } from "@/utils/tokenCache";
 import {
   PDFCategory,
   PDFSubcategory,
@@ -152,20 +153,6 @@ export default function AddPDF() {
     setDragActive(false);
   };
 
-  // Token alma fonksiyonu
-  const getFreshToken = async (): Promise<string> => {
-    if (!auth.currentUser) {
-      await new Promise<void>((resolve) => {
-        const unsub = onAuthStateChanged(auth, () => {
-          unsub();
-          resolve();
-        });
-      });
-    }
-    const token = await auth.currentUser!.getIdToken(true);
-    return token;
-  };
-
   const validateForm = (): string | null => {
     if (!formData.title.trim()) return "Başlık zorunludur.";
     if (!selectedFile) return "PDF dosyası seçmeniz gerekir.";
@@ -196,7 +183,7 @@ export default function AddPDF() {
 
     try {
       // Firebase token al
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
 
       // FormData oluştur
       const uploadFormData = new FormData();

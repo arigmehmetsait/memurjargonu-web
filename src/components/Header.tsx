@@ -124,6 +124,11 @@ export default function Header({
               </Link>
             </li>
             <li className="nav-item">
+              <Link href="/icerikler" className="nav-link">
+                İçerikler
+              </Link>
+            </li>
+            <li className="nav-item">
               <Link href="/plans" className="nav-link">
                 Paketler
               </Link>

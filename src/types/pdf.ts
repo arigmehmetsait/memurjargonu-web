@@ -1,5 +1,3 @@
-import { Timestamp } from "firebase-admin/firestore";
-
 /**
  * PDF Kategorileri - Ana kategoriler
  */
@@ -26,9 +24,6 @@ export enum PDFSubcategory {
   KPSS_COGRAFYA = "kpss_cografya",
   KPSS_VATANDASLIK = "kpss_vatandaslik",
   KPSS_GUNCEL = "kpss_guncel",
-  KPSS_MATEMATIK = "kpss_matematik",
-  KPSS_GEOMETRI = "kpss_geometri",
-  KPSS_TURKCE = "kpss_turkce",
 }
 
 /**
@@ -65,8 +60,8 @@ export interface PDFDocument {
   tags?: string[]; // Arama ve filtreleme için
 
   // Timestamp'lar
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: Date;
+  updatedAt: Date;
   createdBy: string; // Admin user ID
   updatedBy: string; // Son güncelleyen admin user ID
 }

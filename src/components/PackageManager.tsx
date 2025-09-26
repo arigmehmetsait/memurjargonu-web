@@ -8,6 +8,7 @@ import {
 } from "@/constants/packages";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { getValidToken } from "@/utils/tokenCache";
 
 interface PackageManagerProps {
   userId?: string;
@@ -61,18 +62,6 @@ const PackageManager: React.FC<PackageManagerProps> = ({
     additionalHours: 24,
   });
 
-  const getFreshToken = async (): Promise<string> => {
-    if (!auth.currentUser) {
-      await new Promise<void>((resolve) => {
-        const unsub = onAuthStateChanged(auth, () => {
-          unsub();
-          resolve();
-        });
-      });
-    }
-    return await auth.currentUser!.getIdToken(true);
-  };
-
   const fetchUserPackages = async () => {
     if (!selectedUserId.trim()) {
       setMessage({ type: "error", text: "Lütfen kullanıcı ID girin" });
@@ -83,7 +72,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({
     setMessage({ type: "", text: "" });
 
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
       const response = await fetch(
         `/api/admin/users/packages/list?userId=${selectedUserId}`,
         {
@@ -128,7 +117,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({
     setMessage({ type: "", text: "" });
 
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
       const response = await fetch("/api/admin/users/packages/add", {
         method: "POST",
         headers: {
@@ -166,7 +155,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({
     setMessage({ type: "", text: "" });
 
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
       const response = await fetch("/api/admin/users/packages/extend", {
         method: "POST",
         headers: {
@@ -207,7 +196,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({
     }
 
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
       const response = await fetch("/api/admin/users/packages/remove", {
         method: "POST",
         headers: {

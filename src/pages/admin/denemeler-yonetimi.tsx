@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
 import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
@@ -6,6 +7,7 @@ import AdminDenemeTable from "@/components/AdminDenemeTable";
 import CreateDenemeModal from "@/components/CreateDenemeModal";
 
 export default function AdminDenemelerYonetimiPage() {
+  const router = useRouter();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "mevzuat" | "cografya" | "tarih" | "genel"
@@ -35,7 +37,14 @@ export default function AdminDenemelerYonetimiPage() {
           <div className="col-12">
             <div className="d-flex justify-content-between align-items-center mb-4">
               <div>
-                <h1 className="h2">
+                <button
+                  className="btn btn-outline-secondary mb-2"
+                  onClick={() => router.back()}
+                >
+                  <i className="bi bi-arrow-left me-2"></i>
+                  Geri Dön
+                </button>
+                <h1 className="h2 mb-0">
                   <i className="bi bi-journal-text me-2"></i>
                   Denemeler Yönetimi
                 </h1>

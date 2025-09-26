@@ -18,7 +18,7 @@ function loadServiceAccount(): any {
       const path = require("path");
       const serviceAccountPath = path.join(
         process.cwd(),
-        "service-account..json"
+        "service-account.json"
       );
 
       if (fs.existsSync(serviceAccountPath)) {

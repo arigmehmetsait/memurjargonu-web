@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { getValidToken } from "@/utils/tokenCache";
 import { PDFCategory, PDFSubcategory, PDFStats } from "@/types/pdf";
 import {
   PDF_CATEGORY_INFO,
@@ -19,25 +20,11 @@ export default function PDFManagement() {
     "all"
   );
 
-  // Token alma fonksiyonu
-  const getFreshToken = async (): Promise<string> => {
-    if (!auth.currentUser) {
-      await new Promise<void>((resolve) => {
-        const unsub = onAuthStateChanged(auth, () => {
-          unsub();
-          resolve();
-        });
-      });
-    }
-    const token = await auth.currentUser!.getIdToken(true);
-    return token;
-  };
-
   // İstatistikleri yükle
   const loadStats = async () => {
     setLoading(true);
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
 
       const response = await fetch("/api/admin/content/stats", {
         headers: {

@@ -9,6 +9,7 @@ import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
 import { useState, useEffect } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { getValidToken } from "@/utils/tokenCache";
 import {
   PDFDocument,
   PDFCategory,
@@ -32,27 +33,13 @@ export default function PDFList() {
   // URL parametrelerinden filtreleri al
   const subcategoryFilter = router.query.subcategory as PDFSubcategory;
 
-  // Token alma fonksiyonu
-  const getFreshToken = async (): Promise<string> => {
-    if (!auth.currentUser) {
-      await new Promise<void>((resolve) => {
-        const unsub = onAuthStateChanged(auth, () => {
-          unsub();
-          resolve();
-        });
-      });
-    }
-    const token = await auth.currentUser!.getIdToken(true);
-    return token;
-  };
-
   // PDF'leri yükle
   const loadPDFs = async () => {
     setLoading(true);
     setMessage(null);
 
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
 
       // Query parametrelerini oluştur
       const params = new URLSearchParams();
@@ -93,7 +80,7 @@ export default function PDFList() {
       pdf.status === PDFStatus.ACTIVE ? PDFStatus.INACTIVE : PDFStatus.ACTIVE;
 
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
 
       const response = await fetch("/api/admin/content/status", {
         method: "PATCH",
@@ -135,7 +122,7 @@ export default function PDFList() {
     }
 
     try {
-      const idToken = await getFreshToken();
+      const idToken = await getValidToken(); // Cache'li token
 
       const response = await fetch("/api/admin/content/delete", {
         method: "DELETE",
@@ -397,15 +384,16 @@ export default function PDFList() {
                               <td>
                                 {pdf.updatedAt && (
                                   <small className="text-muted">
-                                    {pdf.updatedAt
-                                      .toDate()
-                                      .toLocaleDateString("tr-TR", {
+                                    {new Date(pdf.updatedAt).toLocaleDateString(
+                                      "tr-TR",
+                                      {
                                         day: "2-digit",
                                         month: "2-digit",
                                         year: "numeric",
                                         hour: "2-digit",
                                         minute: "2-digit",
-                                      })}
+                                      }
+                                    )}
                                   </small>
                                 )}
                               </td>

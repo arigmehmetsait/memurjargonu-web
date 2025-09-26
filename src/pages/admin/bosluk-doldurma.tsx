@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
@@ -15,6 +16,7 @@ interface BoslukDoldurmaDeneme {
 }
 
 export default function AdminBoslukDoldurmaPage() {
+  const router = useRouter();
   const [denemeler, setDenemeler] = useState<BoslukDoldurmaDeneme[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -152,10 +154,19 @@ export default function AdminBoslukDoldurmaPage() {
         <div className="row">
           <div className="col-12">
             <div className="d-flex justify-content-between align-items-center mb-4">
-              <h1 className="h2">
-                <i className="bi bi-pencil-square me-2"></i>
-                Boşluk Doldurma Yönetimi
-              </h1>
+              <div>
+                <button
+                  className="btn btn-outline-secondary mb-2"
+                  onClick={() => router.back()}
+                >
+                  <i className="bi bi-arrow-left me-2"></i>
+                  Geri Dön
+                </button>
+                <h1 className="h2 mb-0">
+                  <i className="bi bi-pencil-square me-2"></i>
+                  Boşluk Doldurma Yönetimi
+                </h1>
+              </div>
               <button
                 className="btn btn-primary"
                 onClick={() => setShowCreateModal(true)}
@@ -256,14 +267,22 @@ export default function AdminBoslukDoldurmaPage() {
                               <i className="bi bi-eye"></i>
                             </button>
                             <button
+                              className="btn btn-outline-info btn-sm"
+                              title="İçerikler Sayfasında Görüntüle"
+                              onClick={() => {
+                                window.open("/icerikler", "_blank");
+                              }}
+                            >
+                              <i className="bi bi-collection"></i>
+                            </button>
+                            <button
                               className="btn btn-outline-success btn-sm"
                               title="Soruları Yönet (Admin Görünümü)"
                               onClick={() => {
-                                window.open(
+                                router.push(
                                   `/admin/bosluk-doldurma/${encodeURIComponent(
                                     deneme.id
-                                  )}/sorular`,
-                                  "_blank"
+                                  )}/sorular`
                                 );
                               }}
                             >

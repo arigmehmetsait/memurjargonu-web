@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
@@ -11,6 +12,7 @@ interface Deneme {
 }
 
 export default function AdminDenemelerPage() {
+  const router = useRouter();
   const [denemeler, setDenemeler] = useState<Deneme[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -243,14 +245,22 @@ export default function AdminDenemelerPage() {
                               <i className="bi bi-eye"></i>
                             </button>
                             <button
+                              className="btn btn-outline-info btn-sm"
+                              title="İçerikler Sayfasında Görüntüle"
+                              onClick={() => {
+                                window.open("/icerikler", "_blank");
+                              }}
+                            >
+                              <i className="bi bi-collection"></i>
+                            </button>
+                            <button
                               className="btn btn-outline-success btn-sm"
                               title="Soruları Yönet (Admin Görünümü)"
                               onClick={() => {
-                                window.open(
+                                router.push(
                                   `/admin/denemeler/${encodeURIComponent(
                                     deneme.id
-                                  )}/sorular`,
-                                  "_blank"
+                                  )}/sorular`
                                 );
                               }}
                             >
