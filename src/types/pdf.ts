@@ -15,15 +15,14 @@ export enum PDFSubcategory {
   AGS_EGITIM_TEMKAV = "ags_egitim_temkav",
   AGS_MEVZUAT = "ags_mevzuat",
   AGS_MEVZUAT_VATANDASLIK = "ags_mevzuat_vatandaslik",
-  AGS_TURK_MILLI_EGITIM = "ags_turk_milli_egitim",
   AGS_COGRAFYA = "ags_cografya",
   AGS_GUNCEL_BILGILER = "ags_guncel_bilgiler",
 
   // KPSS Alt Kategorileri
-  KPSS_TARIH = "kpss_tarih",
-  KPSS_COGRAFYA = "kpss_cografya",
-  KPSS_VATANDASLIK = "kpss_vatandaslik",
-  KPSS_GUNCEL = "kpss_guncel",
+  // KPSS_TARIH = "kpss_tarih",
+  // KPSS_COGRAFYA = "kpss_cografya",
+  // KPSS_VATANDASLIK = "kpss_vatandaslik",
+  // KPSS_GUNCEL = "kpss_guncel",
 }
 
 /**

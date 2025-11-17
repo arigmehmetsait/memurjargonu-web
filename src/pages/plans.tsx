@@ -156,12 +156,7 @@ export default function PlansPage() {
                       <button
                         className="btn btn-primary btn-lg w-100"
                         onClick={() => handleSelect(plan)}
-                        disabled
-                        style={{
-                          pointerEvents: "none",
-                          opacity: 0.7,
-                          cursor: "not-allowed",
-                        }}
+                        disabled={processing === plan.id}
                       >
                         {processing === plan.id ? (
                           <>
@@ -174,8 +169,8 @@ export default function PlansPage() {
                           </>
                         ) : (
                           <>
-                            <i className="bi bi-lock me-2"></i>
-                            Satın Al (Yakında)
+                            <i className="bi bi-cart-plus me-2"></i>
+                            Satın Al
                           </>
                         )}
                       </button>

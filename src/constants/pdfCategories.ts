@@ -42,15 +42,6 @@ export const PDF_CATEGORY_INFO: Record<PDFSubcategory, CategoryInfo> = {
     packageTypes: [PackageType.AGS_FULL, PackageType.AGS_MEVZUAT],
   },
 
-  [PDFSubcategory.AGS_TURK_MILLI_EGITIM]: {
-    category: PDFCategory.AGS,
-    subcategory: PDFSubcategory.AGS_TURK_MILLI_EGITIM,
-    name: "Türk Milli Eğitimi",
-    description: "Türk eğitim sistemi ve milli eğitim",
-    icon: "bi-flag",
-    packageTypes: [PackageType.AGS_FULL, PackageType.AGS_EGITIM_TEMELLERI],
-  },
-
   [PDFSubcategory.AGS_COGRAFYA]: {
     category: PDFCategory.AGS,
     subcategory: PDFSubcategory.AGS_COGRAFYA,
@@ -70,41 +61,41 @@ export const PDF_CATEGORY_INFO: Record<PDFSubcategory, CategoryInfo> = {
   },
 
   // KPSS Kategorileri
-  [PDFSubcategory.KPSS_TARIH]: {
-    category: PDFCategory.KPSS,
-    subcategory: PDFSubcategory.KPSS_TARIH,
-    name: "Tarih",
-    description: "Türk tarihi ve genel tarih konuları",
-    icon: "bi-clock-history",
-    packageTypes: [PackageType.KPSS_FULL, PackageType.KPSS_TARIH],
-  },
+  // [PDFSubcategory.KPSS_TARIH]: {
+  //   category: PDFCategory.KPSS,
+  //   subcategory: PDFSubcategory.KPSS_TARIH,
+  //   name: "Tarih",
+  //   description: "Türk tarihi ve genel tarih konuları",
+  //   icon: "bi-clock-history",
+  //   packageTypes: [PackageType.KPSS_FULL, PackageType.KPSS_TARIH],
+  // },
 
-  [PDFSubcategory.KPSS_COGRAFYA]: {
-    category: PDFCategory.KPSS,
-    subcategory: PDFSubcategory.KPSS_COGRAFYA,
-    name: "Coğrafya",
-    description: "Türkiye ve dünya coğrafyası",
-    icon: "bi-geo-alt",
-    packageTypes: [PackageType.KPSS_FULL, PackageType.KPSS_COGRAFYA],
-  },
+  // [PDFSubcategory.KPSS_COGRAFYA]: {
+  //   category: PDFCategory.KPSS,
+  //   subcategory: PDFSubcategory.KPSS_COGRAFYA,
+  //   name: "Coğrafya",
+  //   description: "Türkiye ve dünya coğrafyası",
+  //   icon: "bi-geo-alt",
+  //   packageTypes: [PackageType.KPSS_FULL, PackageType.KPSS_COGRAFYA],
+  // },
 
-  [PDFSubcategory.KPSS_VATANDASLIK]: {
-    category: PDFCategory.KPSS,
-    subcategory: PDFSubcategory.KPSS_VATANDASLIK,
-    name: "Vatandaşlık",
-    description: "Vatandaşlık bilgisi ve anayasa",
-    icon: "bi-person-badge",
-    packageTypes: [PackageType.KPSS_FULL, PackageType.KPSS_VATANDASLIK],
-  },
+  // [PDFSubcategory.KPSS_VATANDASLIK]: {
+  //   category: PDFCategory.KPSS,
+  //   subcategory: PDFSubcategory.KPSS_VATANDASLIK,
+  //   name: "Vatandaşlık",
+  //   description: "Vatandaşlık bilgisi ve anayasa",
+  //   icon: "bi-person-badge",
+  //   packageTypes: [PackageType.KPSS_FULL, PackageType.KPSS_VATANDASLIK],
+  // },
 
-  [PDFSubcategory.KPSS_GUNCEL]: {
-    category: PDFCategory.KPSS,
-    subcategory: PDFSubcategory.KPSS_GUNCEL,
-    name: "Güncel Bilgiler",
-    description: "Güncel olaylar ve genel kültür",
-    icon: "bi-calendar-event",
-    packageTypes: [PackageType.KPSS_FULL, PackageType.KPSS_GUNCEL],
-  },
+  // [PDFSubcategory.KPSS_GUNCEL]: {
+  //   category: PDFCategory.KPSS,
+  //   subcategory: PDFSubcategory.KPSS_GUNCEL,
+  //   name: "Güncel Bilgiler",
+  //   description: "Güncel olaylar ve genel kültür",
+  //   icon: "bi-calendar-event",
+  //   packageTypes: [PackageType.KPSS_FULL, PackageType.KPSS_GUNCEL],
+  // },
 };
 
 /**
@@ -147,14 +138,14 @@ export const getFirebaseCollectionName = (
     [PDFSubcategory.AGS_EGITIM_TEMKAV]: "AgsEgitimTemKavPdf",
     [PDFSubcategory.AGS_MEVZUAT]: "AgsMevzuatPdf",
     [PDFSubcategory.AGS_MEVZUAT_VATANDASLIK]: "AgsMevzuatVatandaslikPdf",
-    [PDFSubcategory.AGS_TURK_MILLI_EGITIM]: "AgsTurkMilliEgitimPdf",
+    // [PDFSubcategory.AGS_TURK_MILLI_EGITIM]: "AgsTurkMilliEgitimPdf",
     [PDFSubcategory.AGS_COGRAFYA]: "CografyaPdfFiles",
     [PDFSubcategory.AGS_GUNCEL_BILGILER]: "GuncelBilgilerPdf",
 
-    [PDFSubcategory.KPSS_TARIH]: "KpssTarihPdf",
-    [PDFSubcategory.KPSS_COGRAFYA]: "KpssCografyaPdf",
-    [PDFSubcategory.KPSS_VATANDASLIK]: "KpssVatandaslikPdf",
-    [PDFSubcategory.KPSS_GUNCEL]: "KpssGuncelPdf",
+    // [PDFSubcategory.KPSS_TARIH]: "KpssTarihPdf",
+    // [PDFSubcategory.KPSS_COGRAFYA]: "KpssCografyaPdf",
+    // [PDFSubcategory.KPSS_VATANDASLIK]: "KpssVatandaslikPdf",
+    // [PDFSubcategory.KPSS_GUNCEL]: "KpssGuncelPdf",
   };
 
   return mapping[subcategory] || `${subcategory}Pdf`;
