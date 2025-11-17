@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { TimedExamRanking } from "@/types/timedExam";
-
+import { Timestamp } from "firebase/firestore";
 export default function ExamRankings() {
   const router = useRouter();
   const { examId } = router.query;
@@ -52,10 +52,18 @@ export default function ExamRankings() {
       setLoading(false);
     }
   };
+  function formatTime(date: Date | Timestamp | null | undefined) {
+    if (!date) return "-";
 
-  const formatTime = (date: Date) => {
-    return new Date(date).toLocaleString("tr-TR");
-  };
+    const actualDate = date instanceof Date ? date : date.toDate();
+
+    // Buradan sonrası eski kodun:
+    const hours = actualDate.getHours().toString().padStart(2, "0");
+    const minutes = actualDate.getMinutes().toString().padStart(2, "0");
+    const seconds = actualDate.getSeconds().toString().padStart(2, "0");
+
+    return `${hours}:${minutes}:${seconds}`;
+  }
 
   const getScoreBadge = (score: number) => {
     if (score >= 80) return "bg-success";
