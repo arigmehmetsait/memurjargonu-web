@@ -13,7 +13,10 @@ export default async function handler(
   >
 ) {
   if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({
+      success: false,
+      error: "Method not allowed",
+    });
   }
 
   try {
