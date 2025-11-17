@@ -21,6 +21,7 @@ import {
   PDF_CATEGORY_INFO,
   getCategoryDisplayName,
 } from "@/constants/pdfCategories";
+import { formatDate } from "@/utils/formatDate";
 
 export default function PDFList() {
   const router = useRouter();
@@ -384,16 +385,7 @@ export default function PDFList() {
                               <td>
                                 {pdf.updatedAt && (
                                   <small className="text-muted">
-                                    {new Date(pdf.updatedAt).toLocaleDateString(
-                                      "tr-TR",
-                                      {
-                                        day: "2-digit",
-                                        month: "2-digit",
-                                        year: "numeric",
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      }
-                                    )}
+                                    {formatDate(pdf.updatedAt)}
                                   </small>
                                 )}
                               </td>

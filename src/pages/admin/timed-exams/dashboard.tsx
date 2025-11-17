@@ -9,6 +9,7 @@ import {
   RealTimeExamMonitoring,
   TimedExamStats,
 } from "@/types/timedExam";
+import { formatTime } from "@/utils/formatTime";
 
 export default function TimedExamDashboard() {
   const [exams, setExams] = useState<TimedExamListItem[]>([]);
@@ -124,10 +125,6 @@ export default function TimedExamDashboard() {
         {statusText[status as keyof typeof statusText]}
       </span>
     );
-  };
-
-  const formatTime = (date: Date) => {
-    return new Date(date).toLocaleString("tr-TR");
   };
 
   if (loading) {

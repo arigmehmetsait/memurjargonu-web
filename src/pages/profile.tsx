@@ -5,6 +5,7 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import Header from "@/components/Header";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { PackageType, PackageCategory } from "@/types/package";
+import { formatDate } from "@/utils/formatDate";
 
 interface PackageInfo {
   type: PackageType;
@@ -70,28 +71,6 @@ export default function Profile() {
       setError(err instanceof Error ? err.message : "Bilinmeyen hata");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return "—";
-    try {
-      // Firebase Timestamp formatını kontrol et
-      if (timestamp._seconds) {
-        // Firebase Timestamp objesi
-        return new Date(timestamp._seconds * 1000).toLocaleString("tr-TR");
-      } else if (timestamp.seconds) {
-        // Alternatif format
-        return new Date(timestamp.seconds * 1000).toLocaleString("tr-TR");
-      } else if (typeof timestamp === "number") {
-        // Unix timestamp
-        return new Date(timestamp * 1000).toLocaleString("tr-TR");
-      } else {
-        // String veya Date objesi
-        return new Date(timestamp).toLocaleString("tr-TR");
-      }
-    } catch {
-      return "—";
     }
   };
 
