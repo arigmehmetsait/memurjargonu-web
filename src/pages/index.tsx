@@ -20,13 +20,13 @@ export default function HomePage() {
                 KPSS'ye hazırlan. Premium üyelik ile sağla.
               </p>
               <div className="d-flex gap-3">
-                <Link
+                {/* <Link
                   href="/icerikler"
                   className="btn btn-light btn-lg btn-custom"
                 >
                   <i className="bi bi-collection me-2"></i>
                   İçerikleri Gör
-                </Link>
+                </Link> */}
                 <Link
                   href="/plans"
                   className="btn btn-outline-light btn-lg btn-custom"

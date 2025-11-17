@@ -38,8 +38,8 @@ export default function ContentManagement() {
               {/* Content Management Cards */}
               <div className="row g-4 mb-5">
                 <div className="col-md-6 col-lg-4">
-                  <div className="card h-100 shadow-sm admin-card">
-                    <div className="card-body text-center p-4">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column  ">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
                       <div className="admin-icon mb-3">
                         <i className="bi bi-file-earmark-pdf"></i>
                       </div>
@@ -50,13 +50,15 @@ export default function ContentManagement() {
                         PDF dosyalarını yönetin, kategorilere göre organize edin
                         ve kullanıcı erişimlerini kontrol edin.
                       </p>
-                      <Link
-                        href="/admin/content/pdf-management"
-                        className="btn btn-primary w-100"
-                      >
-                        <i className="bi bi-arrow-right me-2"></i>
-                        PDF'leri Yönet
-                      </Link>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/content/pdf-management"
+                          className="btn btn-primary w-100"
+                        >
+                          <i className="bi bi-arrow-right me-2"></i>
+                          PDF'leri Yönet
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -86,8 +88,8 @@ export default function ContentManagement() {
                 </div>
 
                 <div className="col-md-6 col-lg-4">
-                  <div className="card h-100 shadow-sm admin-card">
-                    <div className="card-body text-center p-4">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
                       <div className="admin-icon mb-3">
                         <i className="bi bi-check2-square"></i>
                       </div>
@@ -98,20 +100,22 @@ export default function ContentManagement() {
                         Doğru-yanlış denemelerini oluşturun, düzenleyin ve
                         yönetin. Soruları ekleyin ve düzenleyin.
                       </p>
-                      <Link
-                        href="/admin/dogru-yanlis"
-                        className="btn btn-warning w-100"
-                      >
-                        <i className="bi bi-arrow-right me-2"></i>
-                        Doğru-Yanlış Yönet
-                      </Link>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/dogru-yanlis"
+                          className="btn btn-warning w-100"
+                        >
+                          <i className="bi bi-arrow-right me-2"></i>
+                          Doğru-Yanlış Yönet
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="col-md-6 col-lg-4">
-                  <div className="card h-100 shadow-sm admin-card">
-                    <div className="card-body text-center p-4">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
                       <div className="admin-icon mb-3">
                         <i className="bi bi-pencil-square"></i>
                       </div>
@@ -122,13 +126,15 @@ export default function ContentManagement() {
                         Boşluk doldurma denemelerini oluşturun, düzenleyin ve
                         yönetin. Soruları ekleyin ve düzenleyin.
                       </p>
-                      <Link
-                        href="/admin/bosluk-doldurma"
-                        className="btn btn-info w-100"
-                      >
-                        <i className="bi bi-arrow-right me-2"></i>
-                        Boşluk Doldurma Yönet
-                      </Link>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/bosluk-doldurma"
+                          className="btn btn-info w-100"
+                        >
+                          <i className="bi bi-arrow-right me-2"></i>
+                          Boşluk Doldurma Yönet
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>

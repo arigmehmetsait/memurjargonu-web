@@ -39,9 +39,12 @@ export default function AdminHome() {
                       </p>
                       <Link
                         href="/admin/plans"
-                        className="btn btn-primary w-100"
+                        className="btn w-100"
+                        style={{
+                          backgroundColor: "black",
+                          color: "#fff",
+                        }}
                       >
-                        <i className="bi bi-arrow-right me-2"></i>
                         Planları Yönet
                       </Link>
                     </div>
@@ -61,9 +64,12 @@ export default function AdminHome() {
                       </p>
                       <Link
                         href="/admin/users"
-                        className="btn btn-success w-100"
+                        className="btn w-100"
+                        style={{
+                          backgroundColor: "black",
+                          color: "#fff",
+                        }}
                       >
-                        <i className="bi bi-arrow-right me-2"></i>
                         Kullanıcıları Yönet
                       </Link>
                     </div>
@@ -71,8 +77,8 @@ export default function AdminHome() {
                 </div>
 
                 <div className="col-md-3">
-                  <div className="card h-100 shadow-sm admin-card">
-                    <div className="card-body text-center p-4">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
                       <div className="admin-icon mb-3">
                         <i className="bi bi-receipt"></i>
                       </div>
@@ -81,20 +87,25 @@ export default function AdminHome() {
                         Tüm siparişleri görüntüleyin, ödeme durumlarını takip
                         edin ve siparişleri yönetin.
                       </p>
-                      <Link
-                        href="/admin/orders"
-                        className="btn btn-warning w-100"
-                      >
-                        <i className="bi bi-arrow-right me-2"></i>
-                        Siparişleri Görüntüle
-                      </Link>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/orders"
+                          className="btn w-100"
+                          style={{
+                            backgroundColor: "black",
+                            color: "#fff",
+                          }}
+                        >
+                          Siparişleri Görüntüle
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="col-md-3">
-                  <div className="card h-100 shadow-sm admin-card">
-                    <div className="card-body text-center p-4">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
                       <div className="admin-icon mb-3">
                         <i className="bi bi-file-earmark-pdf"></i>
                       </div>
@@ -103,40 +114,88 @@ export default function AdminHome() {
                         Uygulama içeriklerini inceleyin, düzenleyin ve
                         güncelleyin.
                       </p>
-                      <Link
-                        href="/admin/content"
-                        className="btn btn-info w-100"
-                      >
-                        <i className="bi bi-arrow-right me-2"></i>
-                        İçerikleri Yönet
-                      </Link>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/content"
+                          className="btn w-100"
+                          style={{
+                            backgroundColor: "black",
+                            color: "#fff",
+                          }}
+                        >
+                          İçerikleri Yönet
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 </div>
-
                 <div className="col-md-3">
                   <div className="card h-100 shadow-sm admin-card">
                     <div className="card-body text-center p-4">
                       <div className="admin-icon mb-3">
-                        <i className="bi bi-bug"></i>
+                        <i className="bi bi-stopwatch"></i>
                       </div>
-                      <h5 className="card-title fw-bold">Problem Reports</h5>
+                      <h5 className="card-title fw-bold">
+                        Zamanlı Sınav Yönetimi
+                      </h5>
                       <p className="card-text text-muted">
-                        Kullanıcıların bildirdiği problemleri görüntüleyin ve
-                        durumlarını yönetin.
+                        Zamanlı sınavları oluşturun, düzenleyin ve gerçek
+                        zamanlı olarak izleyin.
                       </p>
-                      <Link
-                        href="/admin/problem-reports"
-                        className="btn btn-danger w-100"
-                      >
-                        <i className="bi bi-arrow-right me-2"></i>
-                        Problem Reports
-                      </Link>
+                      <div className="d-grid gap-2">
+                        <Link
+                          href="/admin/timed-exams"
+                          className="btn w-100"
+                          style={{
+                            backgroundColor: "black",
+                            color: "#fff",
+                          }}
+                        >
+                          Sınav Yönetimi
+                        </Link>
+                        {/* <Link
+                          href="/admin/timed-exams/dashboard"
+                          className="btn w-100"
+                          style={{
+                            backgroundColor: "#227387",
+                            color: "#fff",
+                          }}
+                        >
+                          Dashboard
+                        </Link> */}
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="col-md-3">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
+                      <div className="admin-icon mb-3">
+                        <i className="bi bi-bug"></i>
+                      </div>
+                      <h5 className="card-title fw-bold">Problem Raporları</h5>
+                      <p className="card-text text-muted">
+                        Kullanıcıların bildirdiği problemleri görüntüleyin ve
+                        durumlarını yönetin.
+                      </p>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/problem-reports"
+                          className="btn w-100"
+                          style={{
+                            backgroundColor: "black",
+                            color: "#fff",
+                          }}
+                        >
+                          Problem Raporları
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* <div className="col-md-3">
                   <div className="card h-100 shadow-sm admin-card border-warning">
                     <div className="card-body text-center p-4">
                       <div className="admin-icon mb-3 text-warning">
@@ -149,14 +208,17 @@ export default function AdminHome() {
                       </p>
                       <Link
                         href="/admin/recover"
-                        className="btn btn-warning w-100"
+                        className="btn w-100"
+                        style={{
+                          backgroundColor: "black",
+                          color: "#fff",
+                        }}
                       >
-                        <i className="bi bi-shield-check me-2"></i>
                         Admin Kurtar
                       </Link>
                     </div>
                   </div>
-                </div>
+                </div> */}
               </div>
 
               {/* Quick Stats */}

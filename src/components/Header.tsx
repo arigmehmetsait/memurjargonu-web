@@ -123,11 +123,11 @@ export default function Header({
                 Ana Sayfa
               </Link>
             </li>
-            <li className="nav-item">
+            {/* <li className="nav-item">
               <Link href="/icerikler" className="nav-link">
                 İçerikler
               </Link>
-            </li>
+            </li> */}
             <li className="nav-item">
               <Link href="/plans" className="nav-link">
                 Paketler
