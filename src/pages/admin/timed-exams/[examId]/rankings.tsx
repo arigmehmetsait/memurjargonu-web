@@ -126,13 +126,15 @@ export default function ExamRankings() {
                       <table className="table table-hover">
                         <thead>
                           <tr>
-                            <th width="80">Sıra</th>
+                            <th style={{ width: "80px" }}>Sıra</th>
                             <th>Katılımcı</th>
-                            <th width="120">Puan</th>
-                            <th width="120">Doğru</th>
-                            <th width="120">Toplam</th>
-                            <th width="150">Başarı Oranı</th>
-                            <th width="180">Tamamlanma Zamanı</th>
+                            <th style={{ width: "120px" }}>Puan</th>
+                            <th style={{ width: "120px" }}>Doğru</th>
+                            <th style={{ width: "120px" }}>Toplam</th>
+                            <th style={{ width: "150px" }}>Başarı Oranı</th>
+                            <th style={{ width: "180px" }}>
+                              Tamamlanma Zamanı
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -285,5 +287,3 @@ export default function ExamRankings() {
     </AdminGuard>
   );
 }
-
-
