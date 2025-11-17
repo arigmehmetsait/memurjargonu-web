@@ -8,6 +8,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import ConfirmModal from "@/components/ConfirmModal";
 import CreateTimedExamModal from "@/components/admin/CreateTimedExamModal";
 import { TimedExamListItem, TimedExamStats } from "@/types/timedExam";
+import { formatDate } from "@/utils/formatDate";
 
 export default function AdminTimedExams() {
   const router = useRouter();
@@ -302,16 +303,8 @@ export default function AdminTimedExams() {
                                   <strong>{exam.title}</strong>
                                 </td>
                                 <td>{getStatusBadge(status)}</td>
-                                <td>
-                                  {new Date(exam.startDate).toLocaleString(
-                                    "tr-TR"
-                                  )}
-                                </td>
-                                <td>
-                                  {new Date(exam.endDate).toLocaleString(
-                                    "tr-TR"
-                                  )}
-                                </td>
+                                <td>{formatDate(exam.startDate)}</td>
+                                <td>{formatDate(exam.endDate)}</td>
                                 <td>{exam.duration} dk</td>
                                 <td>{exam.totalParticipants}</td>
                                 <td>{exam.averageScore.toFixed(1)}</td>

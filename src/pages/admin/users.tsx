@@ -11,6 +11,7 @@ import { getValidToken } from "@/utils/tokenCache";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
+import { formatDate } from "@/utils/formatDate";
 
 type Row = {
   id: string;
@@ -486,9 +487,7 @@ export default function UsersAdmin() {
                               <td>{badge(r.isPremium)}</td>
                               <td>{blockBadge(r.isBlocked)}</td>
                               <td>
-                                {r.premiumExpiry
-                                  ? new Date(r.premiumExpiry).toLocaleString()
-                                  : "-"}
+                                {r.premiumExpiry ? formatDate(r.premiumExpiry) : "-"}
                               </td>
                               <td>
                                 {r.totalActivePackages &&

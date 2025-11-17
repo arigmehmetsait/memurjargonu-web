@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
 import Header from "@/components/Header";
+import { formatDate } from "@/utils/formatDate";
 
 export default function OrdersAdmin() {
   const [rows, setRows] = useState<any[]>([]);
@@ -51,13 +52,6 @@ export default function OrdersAdmin() {
       default:
         return "bg-secondary";
     }
-  };
-
-  const formatDate = (timestamp: any) => {
-    const date = new Date(
-      timestamp?.seconds ? timestamp.seconds * 1000 : timestamp
-    );
-    return date.toLocaleString("tr-TR");
   };
 
   const handleShowOrderDetails = (order: any) => {

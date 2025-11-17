@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { TimedExamRanking } from "@/types/timedExam";
-
+import { formatTime } from "@/utils/formatTime";
 export default function ExamRankings() {
   const router = useRouter();
   const { examId } = router.query;
@@ -51,10 +51,6 @@ export default function ExamRankings() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatTime = (date: Date) => {
-    return new Date(date).toLocaleString("tr-TR");
   };
 
   const getScoreBadge = (score: number) => {

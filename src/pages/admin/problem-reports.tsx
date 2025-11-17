@@ -7,6 +7,7 @@ import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getValidToken } from "@/utils/tokenCache";
+import { formatDate } from "@/utils/formatDate";
 import { useEffect, useState } from "react";
 
 type ProblemReport = {
@@ -127,38 +128,6 @@ export default function ProblemReportsAdmin() {
     };
 
     return typeTexts[type as keyof typeof typeTexts] || type;
-  };
-
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return "Bilinmiyor";
-
-    try {
-      let date: Date;
-
-      // Firebase Firestore timestamp formatı (_seconds, _nanoseconds)
-      if (timestamp._seconds) {
-        date = new Date(timestamp._seconds * 1000);
-      }
-      // Eski format (seconds)
-      else if (timestamp.seconds) {
-        date = new Date(timestamp.seconds * 1000);
-      }
-      // Direkt Date objesi veya string
-      else {
-        date = new Date(timestamp);
-      }
-
-      return date.toLocaleDateString("tr-TR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch (error) {
-      console.error("Date parsing error:", error, timestamp);
-      return "Geçersiz tarih";
-    }
   };
 
   return (
