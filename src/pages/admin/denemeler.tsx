@@ -4,6 +4,7 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { toast } from "react-toastify";
 
 interface Deneme {
   id: string;
@@ -56,7 +57,7 @@ export default function AdminDenemelerPage() {
 
   const handleCreateDeneme = async () => {
     if (!newDenemeName.trim()) {
-      alert("Deneme adı gereklidir");
+      toast.warn("Deneme adı gereklidir");
       return;
     }
 
@@ -82,13 +83,13 @@ export default function AdminDenemelerPage() {
         setNewDenemeName("");
         setNewDenemeDescription("");
         await fetchDenemeler();
-        alert("Deneme başarıyla oluşturuldu!");
+        toast.success("Deneme başarıyla oluşturuldu!");
       } else {
-        alert("Hata: " + data.error);
+        toast.error(data.error || "Deneme oluşturulamadı");
       }
     } catch (err) {
       console.error("Deneme oluşturma hatası:", err);
-      alert("Deneme oluşturulurken bir hata oluştu");
+      toast.error("Deneme oluşturulurken bir hata oluştu");
     } finally {
       setCreating(false);
     }
@@ -119,15 +120,15 @@ export default function AdminDenemelerPage() {
         setShowDeleteModal(false);
         setDenemeToDelete(null);
         fetchDenemeler(); // Listeyi yenile
-        alert(
-          `"${data.data.denemeName}" denemesi başarıyla silindi. ${data.data.deletedQuestionsCount} soru da silindi.`
+        toast.success(
+          `"${data.data.denemeName}" denemesi silindi. ${data.data.deletedQuestionsCount} soru da silindi.`
         );
       } else {
-        alert("Hata: " + data.error);
+        toast.error(data.error || "Deneme silinemedi");
       }
     } catch (err) {
       console.error("Deneme silme hatası:", err);
-      alert("Deneme silinirken bir hata oluştu");
+      toast.error("Deneme silinirken bir hata oluştu");
     } finally {
       setDeleting(false);
     }
@@ -307,7 +308,7 @@ export default function AdminDenemelerPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="col-md-6">
+                  {/* <div className="col-md-6">
                     <div className="card bg-light">
                       <div className="card-body">
                         <h5 className="card-title">
@@ -326,7 +327,7 @@ export default function AdminDenemelerPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}

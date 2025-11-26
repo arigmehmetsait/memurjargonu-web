@@ -90,9 +90,3 @@ export function getApiPath(denemeType: string): string {
 export function getAdminApiPath(denemeType: string): string {
   return getDenemeConfig(denemeType).adminApiPath;
 }
-
-
-
-
-
-

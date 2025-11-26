@@ -87,7 +87,11 @@ async function handleUpdate(
   }
 
   // Güncelleme verilerini validate et
-  const validUpdates: Partial<PDFDocumentRequest> = {};
+  const validUpdates: Partial<PDFDocumentRequest> & {
+    pdfUrl?: string;
+    fileName?: string;
+    fileSize?: number;
+  } = {};
 
   if (updates.title !== undefined) validUpdates.title = updates.title;
   if (updates.description !== undefined)
@@ -100,6 +104,11 @@ async function handleUpdate(
     validUpdates.sortOrder = updates.sortOrder;
   if (updates.tags !== undefined) validUpdates.tags = updates.tags;
   if (updates.status !== undefined) validUpdates.status = updates.status;
+
+  // PDF dosyası bilgileri (pdfUrl, fileName, fileSize)
+  if (updates.pdfUrl !== undefined) validUpdates.pdfUrl = updates.pdfUrl;
+  if (updates.fileName !== undefined) validUpdates.fileName = updates.fileName;
+  if (updates.fileSize !== undefined) validUpdates.fileSize = updates.fileSize;
 
   const result = await pdfService.updatePDF(
     subcategory,

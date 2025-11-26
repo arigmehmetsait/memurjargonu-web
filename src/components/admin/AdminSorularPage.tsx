@@ -6,8 +6,11 @@ import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import CustomModal from "@/components/CustomModal";
 import ConfirmModal from "@/components/ConfirmModal";
+import ExcelImportModal from "@/components/ExcelImportModal";
 import { getValidToken } from "@/utils/tokenCache";
 import { getDenemeConfig } from "@/utils/denemeRouting";
+import { toast } from "react-toastify";
+import * as XLSX from "xlsx";
 
 interface Soru {
   id: string;
@@ -51,7 +54,9 @@ export default function AdminSorularPage({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showExcelModal, setShowExcelModal] = useState(false);
   const [selectedSoru, setSelectedSoru] = useState<Soru | null>(null);
+  const [importing, setImporting] = useState(false);
 
   // Düzenleme formu state'i
   const [editForm, setEditForm] = useState({
@@ -74,6 +79,134 @@ export default function AdminSorularPage({
     zorluk: "orta",
     konu: "",
   });
+
+  const excelModalConfig = (() => {
+    const dogruYanlisConfig = {
+      title: "Excel'den Toplu Soru Ekle",
+      description:
+        "Doğru-Yanlış sorularını Excel dosyasından toplu olarak içe aktarabilirsiniz.",
+      columns: [
+        {
+          name: "soru",
+          required: true,
+          description: "Soru metni",
+        },
+        {
+          name: "cevap",
+          required: true,
+          description: 'Doğru cevap: "Doğru" veya "Yanlış"',
+        },
+        {
+          name: "aciklama",
+          required: false,
+          description: "Cevap açıklaması (opsiyonel)",
+        },
+        {
+          name: "zorluk",
+          required: false,
+          description:
+            'Zorluk seviyesi: "kolay", "orta" veya "zor" (opsiyonel)',
+        },
+        {
+          name: "konu",
+          required: false,
+          description: "Konu (opsiyonel, varsayılan: deneme türüne göre)",
+        },
+      ],
+      exampleData: [
+        {
+          soru: "Türkiye'nin başkenti Ankara'dır.",
+          cevap: "Doğru",
+          aciklama: "Türkiye'nin başkenti 1923'ten beri Ankara'dır.",
+          zorluk: "kolay",
+          konu: config.defaultKonu,
+        },
+        {
+          soru: "KPSS sınavı yılda iki kez yapılır.",
+          cevap: "Yanlış",
+          aciklama: "KPSS sınavı genellikle yılda bir kez yapılır.",
+          zorluk: "orta",
+          konu: config.defaultKonu,
+        },
+      ],
+      accept: ".xlsx,.xls",
+      buttonText: "Soruları İçe Aktar",
+      buttonIcon: "bi-file-earmark-spreadsheet",
+    };
+
+    if (denemeType === "boslukdoldurma") {
+      return {
+        title: "Excel'den Boşluk Doldurma Ekle",
+        description:
+          "Boşluk doldurma sorularını Excel dosyasından toplu olarak içe aktarabilirsiniz. Her soru için en az iki seçenek girin ve doğru cevabı işaretleyin.",
+        columns: [
+          {
+            name: "soru",
+            required: true,
+            description: "Boşluk doldurma soru metni",
+          },
+          {
+            name: "secenek_a",
+            required: true,
+            description: "A seçeneği",
+          },
+          {
+            name: "secenek_b",
+            required: true,
+            description: "B seçeneği",
+          },
+          {
+            name: "secenek_c",
+            required: false,
+            description: "C seçeneği (opsiyonel)",
+          },
+          {
+            name: "secenek_d",
+            required: false,
+            description: "D seçeneği (opsiyonel)",
+          },
+          {
+            name: "dogrucevap",
+            required: true,
+            description: "Doğru seçeneğin metni",
+          },
+          {
+            name: "aciklama",
+            required: false,
+            description: "Açıklama (opsiyonel)",
+          },
+          {
+            name: "zorluk",
+            required: false,
+            description: 'Zorluk seviyesi: "kolay", "orta" veya "zor"',
+          },
+          {
+            name: "konu",
+            required: false,
+            description: "Konu (opsiyonel, varsayılan: deneme türüne göre)",
+          },
+        ],
+        exampleData: [
+          {
+            soru: "________ sonucunda Avrupa Hun Devleti kurulmuştur?",
+            secenek_a: "Kavimler Göçü",
+            secenek_b: "Malazgirt Savaşı",
+            secenek_c: "Haçlı Seferleri",
+            secenek_d: "",
+            dogrucevap: "Kavimler Göçü",
+            aciklama: "Kavimler Göçü sonrası Avrupa Hun Devleti kuruldu.",
+            zorluk: "orta",
+            konu: config.defaultKonu,
+          },
+        ],
+        accept: ".xlsx,.xls",
+        buttonText: "Soruları İçe Aktar",
+        buttonIcon: "bi-file-earmark-spreadsheet",
+      };
+    }
+
+    return dogruYanlisConfig;
+  })();
 
   useEffect(() => {
     if (denemeId && typeof denemeId === "string") {
@@ -146,15 +279,39 @@ export default function AdminSorularPage({
 
   const handleEditSoru = (soru: Soru) => {
     setSelectedSoru(soru);
-    setEditForm({
-      soru: soru.soru,
-      cevap: soru.cevap,
-      secenekler: [...soru.secenekler],
-      dogruSecenek: soru.dogruSecenek,
-      aciklama: soru.aciklama,
-      zorluk: soru.zorluk,
-      konu: config.defaultKonu, // Deneme türüne göre konu
-    });
+    // Doğru-yanlış soruları için seçenekleri otomatik doldur
+    if (denemeType === "dogruyanlis") {
+      setEditForm({
+        soru: soru.soru,
+        cevap: soru.cevap,
+        secenekler: ["Doğru", "Yanlış"],
+        dogruSecenek: soru.dogruSecenek,
+        aciklama: soru.aciklama,
+        zorluk: soru.zorluk,
+        konu: config.defaultKonu, // Deneme türüne göre konu
+      });
+    } else {
+      let dogruSecenek = soru.dogruSecenek;
+      if (denemeType === "boslukdoldurma" && soru.secenekler.length > 0) {
+        const correctIndex = soru.secenekler.findIndex(
+          (secenek) =>
+            secenek.trim().toLowerCase() === soru.cevap.trim().toLowerCase()
+        );
+        if (correctIndex >= 0) {
+          dogruSecenek = correctIndex;
+        }
+      }
+
+      setEditForm({
+        soru: soru.soru,
+        cevap: soru.cevap,
+        secenekler: [...soru.secenekler],
+        dogruSecenek,
+        aciklama: soru.aciklama,
+        zorluk: soru.zorluk,
+        konu: config.defaultKonu, // Deneme türüne göre konu
+      });
+    }
     setIsEditModalOpen(true);
   };
 
@@ -170,6 +327,38 @@ export default function AdminSorularPage({
       setLoading(true);
       const token = await getValidToken();
 
+      // Doğru-yanlış soruları için resimdeki modele göre sadece text ve correct gönder
+      let requestBody;
+      if (denemeType === "dogruyanlis") {
+        requestBody = {
+          text: editForm.soru.trim(),
+          correct: editForm.dogruSecenek === 0 ? "Doğru" : "Yanlış",
+        };
+      } else if (denemeType === "boslukdoldurma") {
+        const trimmedOptions = editForm.secenekler
+          .map((secenek) => secenek.trim())
+          .filter((secenek) => secenek.length > 0);
+        const correctAnswer =
+          editForm.secenekler[editForm.dogruSecenek]?.trim() || "";
+
+        requestBody = {
+          questionText: editForm.soru.trim(),
+          correctAnswer,
+          options: trimmedOptions,
+          explanation: editForm.aciklama?.trim() || "",
+          difficulty: editForm.zorluk,
+          subject: editForm.konu?.trim() || config.defaultKonu,
+        };
+      } else {
+        requestBody = {
+          ...editForm,
+          soru: editForm.soru.trim(),
+          cevap: editForm.cevap.trim(),
+          konu: editForm.konu?.trim() || config.defaultKonu,
+          secenekler: editForm.secenekler.map((secenek) => secenek.trim()),
+        };
+      }
+
       const response = await fetch(
         `${config.adminApiPath}/${denemeId}/sorular/${selectedSoru.id}`,
         {
@@ -178,7 +367,7 @@ export default function AdminSorularPage({
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(editForm),
+          body: JSON.stringify(requestBody),
         }
       );
 
@@ -235,44 +424,109 @@ export default function AdminSorularPage({
 
   const handleAddSoru = () => {
     // Formu sıfırla ve konuyu otomatik doldur
-    setNewSoruForm({
-      soru: "",
-      cevap: "",
-      secenekler: ["", "", "", ""],
-      dogruSecenek: 0,
-      aciklama: "",
-      zorluk: "orta",
-      konu: config.defaultKonu,
-    });
+    // Doğru-yanlış için seçenekleri otomatik doldur
+    if (denemeType === "dogruyanlis") {
+      setNewSoruForm({
+        soru: "",
+        cevap: "",
+        secenekler: ["Doğru", "Yanlış"],
+        dogruSecenek: 0,
+        aciklama: "",
+        zorluk: "orta",
+        konu: config.defaultKonu,
+      });
+    } else {
+      setNewSoruForm({
+        soru: "",
+        cevap: "",
+        secenekler: ["", "", "", ""],
+        dogruSecenek: 0,
+        aciklama: "",
+        zorluk: "orta",
+        konu: config.defaultKonu,
+      });
+    }
     setIsAddModalOpen(true);
   };
 
   const addNewSoru = async () => {
     if (!denemeId) return;
 
-    // Form validasyonu
-    if (
-      !newSoruForm.soru.trim() ||
-      !newSoruForm.cevap.trim() ||
-      !newSoruForm.konu.trim()
-    ) {
-      setError("Lütfen tüm zorunlu alanları doldurun.");
-      return;
-    }
+    const trimmedSoru = newSoruForm.soru.trim();
+    const trimmedCevap = newSoruForm.cevap.trim();
+    const trimmedKonu = newSoruForm.konu.trim() || config.defaultKonu;
+    const trimmedAciklama = newSoruForm.aciklama?.trim() || "";
+    const trimmedSecenekler = newSoruForm.secenekler.map((sec) => sec.trim());
+    const filledSecenekler = trimmedSecenekler.filter((sec) => sec !== "");
+    const selectedOption = trimmedSecenekler[newSoruForm.dogruSecenek] || "";
 
-    // En az 2 seçenek olmalı
-    const filledSecenekler = newSoruForm.secenekler.filter(
-      (sec) => sec.trim() !== ""
-    );
-    if (filledSecenekler.length < 2) {
-      setError("En az 2 seçenek doldurulmalıdır.");
-      return;
+    // Doğru-yanlış soruları için özel validasyon
+    if (denemeType === "dogruyanlis") {
+      if (!trimmedSoru) {
+        setError("Lütfen soru metnini girin.");
+        return;
+      }
+      if (newSoruForm.dogruSecenek !== 0 && newSoruForm.dogruSecenek !== 1) {
+        setError("Lütfen doğru cevabı seçin.");
+        return;
+      }
+    } else if (denemeType === "boslukdoldurma") {
+      if (!trimmedSoru) {
+        setError("Lütfen soru metnini girin.");
+        return;
+      }
+      if (filledSecenekler.length < 2) {
+        setError("En az 2 seçenek doldurulmalıdır.");
+        return;
+      }
+      if (!selectedOption) {
+        setError("Lütfen doğru cevabı seçin ve doldurun.");
+        return;
+      }
+    } else {
+      // Diğer deneme türleri için normal validasyon
+      if (!trimmedSoru || !trimmedCevap || !trimmedKonu) {
+        setError("Lütfen tüm zorunlu alanları doldurun.");
+        return;
+      }
+
+      // En az 2 seçenek olmalı
+      if (filledSecenekler.length < 2) {
+        setError("En az 2 seçenek doldurulmalıdır.");
+        return;
+      }
     }
 
     try {
       setLoading(true);
       setError(null);
       const token = await getValidToken();
+
+      // Doğru-yanlış soruları için resimdeki modele göre sadece text ve correct gönder
+      let requestBody;
+      if (denemeType === "dogruyanlis") {
+        requestBody = {
+          text: trimmedSoru,
+          correct: newSoruForm.dogruSecenek === 0 ? "Doğru" : "Yanlış",
+        };
+      } else if (denemeType === "boslukdoldurma") {
+        requestBody = {
+          questionText: trimmedSoru,
+          correctAnswer: selectedOption,
+          options: filledSecenekler,
+          explanation: trimmedAciklama,
+          difficulty: newSoruForm.zorluk,
+          subject: trimmedKonu,
+        };
+      } else {
+        requestBody = {
+          ...newSoruForm,
+          soru: trimmedSoru,
+          cevap: trimmedCevap,
+          konu: trimmedKonu,
+          secenekler: trimmedSecenekler,
+        };
+      }
 
       const response = await fetch(
         `${config.adminApiPath}/${denemeId}/sorular`,
@@ -282,7 +536,7 @@ export default function AdminSorularPage({
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(newSoruForm),
+          body: JSON.stringify(requestBody),
         }
       );
 
@@ -291,15 +545,28 @@ export default function AdminSorularPage({
       if (data.success) {
         await fetchSorular(); // Listeyi yenile
         setIsAddModalOpen(false);
-        setNewSoruForm({
-          soru: "",
-          cevap: "",
-          secenekler: ["", "", "", ""],
-          dogruSecenek: 0,
-          aciklama: "",
-          zorluk: "orta",
-          konu: config.defaultKonu,
-        });
+        // Doğru-yanlış için seçenekleri otomatik doldur
+        if (denemeType === "dogruyanlis") {
+          setNewSoruForm({
+            soru: "",
+            cevap: "",
+            secenekler: ["Doğru", "Yanlış"],
+            dogruSecenek: 0,
+            aciklama: "",
+            zorluk: "orta",
+            konu: config.defaultKonu,
+          });
+        } else {
+          setNewSoruForm({
+            soru: "",
+            cevap: "",
+            secenekler: ["", "", "", ""],
+            dogruSecenek: 0,
+            aciklama: "",
+            zorluk: "orta",
+            konu: config.defaultKonu,
+          });
+        }
       } else {
         setError(data.error || "Soru eklenemedi");
       }
@@ -316,7 +583,355 @@ export default function AdminSorularPage({
     setIsEditModalOpen(false);
     setIsDeleteModalOpen(false);
     setIsAddModalOpen(false);
+    setShowExcelModal(false);
     setSelectedSoru(null);
+  };
+
+  const handleExcelExport = () => {
+    if (!denemeData) {
+      toast.warn("Önce soru verilerini yükleyin.");
+      return;
+    }
+
+    const hasSorular = denemeData.sorular.length > 0;
+
+    // Doğru-yanlış için import schema'ya uygun export
+    let exportRows: Array<Record<string, string>>;
+
+    if (denemeType === "dogruyanlis") {
+      // Doğru-yanlış için sadece gerekli kolonlar: soru, cevap, aciklama, zorluk, konu
+      exportRows = hasSorular
+        ? denemeData.sorular.map((soru) => ({
+            soru: soru.soru || "",
+            cevap: soru.cevap || "",
+            aciklama: soru.aciklama || "",
+            zorluk: soru.zorluk || "orta",
+            konu: soru.konu || config.defaultKonu,
+          }))
+        : [
+            {
+              soru: "",
+              cevap: "",
+              aciklama: "",
+              zorluk: "",
+              konu: config.defaultKonu,
+            },
+          ];
+    } else if (denemeType === "boslukdoldurma") {
+      const optionHeaders = ["A", "B", "C", "D", "E", "F"];
+
+      exportRows = hasSorular
+        ? denemeData.sorular.map((soru) => {
+            const row: Record<string, string> = {
+              soru: soru.soru || "",
+              dogrucevap: soru.cevap || "",
+              aciklama: soru.aciklama || "",
+              zorluk: soru.zorluk || "",
+              konu: soru.konu || config.defaultKonu,
+            };
+
+            optionHeaders.forEach((header, index) => {
+              row[`secenek_${header.toLowerCase()}`] =
+                soru.secenekler[index] || "";
+            });
+
+            return row;
+          })
+        : [
+            optionHeaders.reduce(
+              (acc, header) => ({
+                ...acc,
+                [`secenek_${header.toLowerCase()}`]: "",
+              }),
+              {
+                soru: "",
+                dogrucevap: "",
+                aciklama: "",
+                zorluk: "",
+                konu: config.defaultKonu,
+              }
+            ),
+          ];
+    } else {
+      // Diğer deneme türleri için mevcut format
+      exportRows = hasSorular
+        ? denemeData.sorular.map((soru, index) => ({
+            "Soru No": String(index + 1),
+            Soru: soru.soru || "",
+            "Doğru Cevap": soru.cevap || "",
+            "Doğru Seçenek": String.fromCharCode(65 + soru.dogruSecenek),
+            Seçenekler: soru.secenekler.join(" | "),
+            Zorluk: soru.zorluk || "",
+            Konu: soru.konu || "",
+            Açıklama: soru.aciklama || "",
+          }))
+        : [
+            {
+              "Soru No": "",
+              Soru: "",
+              "Doğru Cevap": "",
+              "Doğru Seçenek": "",
+              Seçenekler: "",
+              Zorluk: "",
+              Konu: config.defaultKonu,
+              Açıklama: "",
+            },
+          ];
+    }
+
+    const worksheet = XLSX.utils.json_to_sheet(exportRows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sorular");
+
+    const defaultSlug =
+      denemeType === "dogruyanlis"
+        ? "dogru-yanlis-sorulari"
+        : denemeType === "boslukdoldurma"
+        ? "bosluk-doldurma-sorulari"
+        : "deneme-sorulari";
+
+    const fileName = `${
+      denemeData.denemeName?.replace(/[<>:"/\\|?*]+/g, "-") || defaultSlug
+    }-${new Date().toISOString().split("T")[0]}.xlsx`;
+
+    XLSX.writeFile(workbook, fileName);
+    toast.success(
+      hasSorular
+        ? "Sorular Excel olarak indirildi."
+        : "Boş şablon Excel olarak indirildi."
+    );
+  };
+
+  const handleExcelImport = async (file: File) => {
+    if (!file || !denemeId) return;
+
+    try {
+      setImporting(true);
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+
+      if (!sheetName) {
+        toast.error("Excel dosyasında sayfa bulunamadı");
+        return;
+      }
+
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+        defval: "",
+      });
+
+      const token = await getValidToken();
+      let successCount = 0;
+      let errorCount = 0;
+
+      const extractBoslukOptions = (normalized: Record<string, any>) => {
+        const optionBuckets = [
+          [
+            "secenek_a",
+            "secenek_b",
+            "secenek_c",
+            "secenek_d",
+            "secenek_e",
+            "secenek_f",
+          ],
+          [
+            "secenek1",
+            "secenek2",
+            "secenek3",
+            "secenek4",
+            "secenek5",
+            "secenek6",
+          ],
+          ["option1", "option2", "option3", "option4", "option5", "option6"],
+        ];
+
+        const seen = new Set<string>();
+        const result: string[] = [];
+
+        const pushOption = (value: unknown) => {
+          if (value === undefined || value === null) return;
+          const trimmed = String(value).trim();
+          if (!trimmed) return;
+          const key = trimmed.toLowerCase();
+          if (seen.has(key)) return;
+          seen.add(key);
+          result.push(trimmed);
+        };
+
+        optionBuckets.forEach((bucket) =>
+          bucket.forEach((key) => pushOption(normalized[key]))
+        );
+
+        const listField =
+          normalized["secenekler"] ||
+          normalized["options"] ||
+          normalized["seçenekler"];
+
+        if (Array.isArray(listField)) {
+          listField.forEach(pushOption);
+        } else if (typeof listField === "string") {
+          listField
+            .split(/[|;,]/)
+            .map((part) => part.trim())
+            .forEach(pushOption);
+        }
+
+        return result;
+      };
+
+      for (const row of rows) {
+        const normalized: Record<string, any> = {};
+        Object.keys(row).forEach((key) => {
+          normalized[key.trim().toLowerCase()] = row[key];
+        });
+
+        const questionText = String(
+          normalized["soru"] || normalized["questiontext"] || ""
+        ).trim();
+        const rawAnswer = String(
+          normalized["dogrucevap"] ||
+            normalized["correctanswer"] ||
+            normalized["cevap"] ||
+            ""
+        ).trim();
+        const lowerAnswer = rawAnswer.toLowerCase();
+        const explanation = String(
+          normalized["aciklama"] ||
+            normalized["explanation"] ||
+            normalized["açıklama"] ||
+            ""
+        ).trim();
+        const difficulty = String(
+          normalized["zorluk"] ||
+            normalized["difficulty"] ||
+            normalized["seviye"] ||
+            "orta"
+        )
+          .trim()
+          .toLowerCase();
+        const subject =
+          String(
+            normalized["konu"] ||
+              normalized["subject"] ||
+              normalized["topic"] ||
+              ""
+          ).trim() || config.defaultKonu;
+
+        if (!questionText) {
+          continue;
+        }
+
+        // Zorluk değerini normalize et
+        let finalDifficulty = "orta";
+        if (difficulty === "kolay" || difficulty === "easy") {
+          finalDifficulty = "kolay";
+        } else if (difficulty === "zor" || difficulty === "hard") {
+          finalDifficulty = "zor";
+        }
+
+        try {
+          let requestBody: Record<string, any> | null = null;
+
+          // Doğru-yanlış soruları için resimdeki modele göre sadece text ve correct gönder
+          if (denemeType === "dogruyanlis") {
+            if (!rawAnswer) {
+              errorCount++;
+              continue;
+            }
+
+            let finalAnswer = "Doğru";
+            if (lowerAnswer === "yanlış" || lowerAnswer === "yanlis") {
+              finalAnswer = "Yanlış";
+            } else if (lowerAnswer !== "doğru" && lowerAnswer !== "dogru") {
+              errorCount++;
+              continue;
+            }
+
+            requestBody = {
+              text: questionText,
+              correct: finalAnswer,
+            };
+          } else if (denemeType === "boslukdoldurma") {
+            const optionsFromRow = extractBoslukOptions(normalized);
+            if (optionsFromRow.length < 2) {
+              errorCount++;
+              continue;
+            }
+
+            if (!rawAnswer) {
+              errorCount++;
+              continue;
+            }
+
+            const hasAnswerInOptions = optionsFromRow.some(
+              (option) => option.trim().toLowerCase() === lowerAnswer
+            );
+            const finalOptions = hasAnswerInOptions
+              ? optionsFromRow
+              : [...optionsFromRow, rawAnswer];
+
+            requestBody = {
+              questionText,
+              correctAnswer: rawAnswer,
+              options: finalOptions,
+              explanation: explanation || "",
+              difficulty: finalDifficulty,
+              subject,
+            };
+          } else {
+            requestBody = {
+              questionText,
+              correctAnswer: rawAnswer || questionText,
+              options: ["Doğru", "Yanlış"],
+              explanation: explanation || "",
+              difficulty: finalDifficulty,
+              subject,
+            };
+          }
+
+          const response = await fetch(
+            `${config.adminApiPath}/${denemeId}/sorular`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(requestBody),
+            }
+          );
+
+          const data = await response.json();
+          if (data.success) {
+            successCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (err) {
+          console.error("Soru eklenirken hata:", err);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} soru başarıyla eklendi`);
+        await fetchSorular(); // Listeyi yenile
+      }
+      if (errorCount > 0) {
+        toast.warn(`${errorCount} soru eklenemedi`);
+      }
+      if (successCount === 0 && errorCount === 0) {
+        toast.warn("Excel dosyasında geçerli soru bulunamadı");
+      }
+
+      setShowExcelModal(false);
+    } catch (err) {
+      console.error("Excel içe aktarım hatası:", err);
+      toast.error("Excel dosyası okunamadı");
+    } finally {
+      setImporting(false);
+    }
   };
 
   return (
@@ -338,8 +953,8 @@ export default function AdminSorularPage({
       <main className="container my-5">
         <div className="row">
           <div className="col-12">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <div>
+            <div className="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-3 mb-4">
+              <div className="w-100">
                 <h1 className="h2">
                   <i className="bi bi-list-ul me-2"></i>
                   {denemeData?.denemeName || "Deneme"} - {config.title}
@@ -350,15 +965,15 @@ export default function AdminSorularPage({
                   </p>
                 )}
               </div>
-              <div className="d-flex gap-2">
+              <div className="d-flex flex-wrap gap-2 w-100 w-lg-auto">
                 <button
-                  className="btn btn-outline-secondary"
+                  className="btn btn-outline-secondary flex-fill flex-lg-grow-0"
                   onClick={() => router.back()}
                 >
                   <i className="bi bi-arrow-left me-2"></i>
                   Geri Dön
                 </button>
-                <button
+                {/* <button
                   className="btn btn-outline-primary"
                   onClick={() => {
                     router.push(`${config.userViewPath}/${denemeId}`);
@@ -366,8 +981,27 @@ export default function AdminSorularPage({
                 >
                   <i className="bi bi-eye me-2"></i>
                   Kullanıcı Görünümü
+                </button> */}
+                <button
+                  className="btn btn-outline-info flex-fill flex-lg-grow-0"
+                  onClick={() => setShowExcelModal(true)}
+                  disabled={importing}
+                >
+                  <i className="bi bi-file-earmark-spreadsheet me-2"></i>
+                  Excel'den Toplu Ekle
                 </button>
-                <button className="btn btn-primary" onClick={handleAddSoru}>
+                <button
+                  className="btn btn-outline-success flex-fill flex-lg-grow-0"
+                  onClick={handleExcelExport}
+                  disabled={!denemeData}
+                >
+                  <i className="bi bi-file-earmark-arrow-down me-2"></i>
+                  Excel'e Aktar
+                </button>
+                <button
+                  className="btn btn-primary flex-fill flex-lg-grow-0"
+                  onClick={handleAddSoru}
+                >
                   <i className="bi bi-plus-circle me-2"></i>
                   Yeni Soru Ekle
                 </button>
@@ -509,7 +1143,7 @@ export default function AdminSorularPage({
 
             {denemeData && denemeData.sorular.length > 0 && (
               <div className="mt-4">
-                <div className="row">
+                <div className="row g-3">
                   <div className="col-md-6">
                     <div className="card bg-light">
                       <div className="card-body">
@@ -543,7 +1177,7 @@ export default function AdminSorularPage({
                       </div>
                     </div>
                   </div>
-                  <div className="col-md-6">
+                  {/* <div className="col-md-6">
                     <div className="card bg-light">
                       <div className="card-body">
                         <h5 className="card-title">
@@ -562,7 +1196,7 @@ export default function AdminSorularPage({
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}
@@ -596,65 +1230,115 @@ export default function AdminSorularPage({
               />
             </div>
 
-            {/* Seçenekler */}
-            <div className="mb-3">
-              <label className="form-label fw-bold">
-                Seçenekler: <span className="text-danger">*</span>
-              </label>
-              <div className="alert alert-info">
-                <i className="bi bi-info-circle me-2"></i>
-                En az 2 seçenek doldurulmalıdır. Doğru cevabı işaretleyin.
-              </div>
-              {newSoruForm.secenekler.map((secenek, index) => (
-                <div key={index} className="input-group mb-2">
-                  <span className="input-group-text">
+            {/* Doğru-Yanlış için özel seçenekler */}
+            {denemeType === "dogruyanlis" ? (
+              <div className="mb-3">
+                <label className="form-label fw-bold">
+                  Doğru Cevap: <span className="text-danger">*</span>
+                </label>
+                <div className="alert alert-info">
+                  <i className="bi bi-info-circle me-2"></i>
+                  Sorunun doğru cevabını seçin.
+                </div>
+                <div className="d-flex gap-3">
+                  <div className="form-check form-check-lg">
                     <input
+                      className="form-check-input"
                       type="radio"
                       name="dogruSecenek"
-                      checked={newSoruForm.dogruSecenek === index}
+                      id="dogruSecenek0"
+                      checked={newSoruForm.dogruSecenek === 0}
                       onChange={() =>
-                        setNewSoruForm({ ...newSoruForm, dogruSecenek: index })
+                        setNewSoruForm({ ...newSoruForm, dogruSecenek: 0 })
                       }
-                      className="form-check-input me-2"
                     />
-                    {String.fromCharCode(65 + index)}.
-                  </span>
-                  <input
-                    type="text"
+                    <label className="form-check-label" htmlFor="dogruSecenek0">
+                      <strong>Doğru</strong>
+                    </label>
+                  </div>
+                  <div className="form-check form-check-lg">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="dogruSecenek"
+                      id="dogruSecenek1"
+                      checked={newSoruForm.dogruSecenek === 1}
+                      onChange={() =>
+                        setNewSoruForm({ ...newSoruForm, dogruSecenek: 1 })
+                      }
+                    />
+                    <label className="form-check-label" htmlFor="dogruSecenek1">
+                      <strong>Yanlış</strong>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Seçenekler */}
+                <div className="mb-3">
+                  <label className="form-label fw-bold">
+                    Seçenekler: <span className="text-danger">*</span>
+                  </label>
+                  <div className="alert alert-info">
+                    <i className="bi bi-info-circle me-2"></i>
+                    En az 2 seçenek doldurulmalıdır. Doğru cevabı işaretleyin.
+                  </div>
+                  {newSoruForm.secenekler.map((secenek, index) => (
+                    <div key={index} className="input-group mb-2">
+                      <span className="input-group-text">
+                        <input
+                          type="radio"
+                          name="dogruSecenek"
+                          checked={newSoruForm.dogruSecenek === index}
+                          onChange={() =>
+                            setNewSoruForm({
+                              ...newSoruForm,
+                              dogruSecenek: index,
+                            })
+                          }
+                          className="form-check-input me-2"
+                        />
+                        {String.fromCharCode(65 + index)}.
+                      </span>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={secenek}
+                        onChange={(e) => {
+                          const newSecenekler = [...newSoruForm.secenekler];
+                          newSecenekler[index] = e.target.value;
+                          setNewSoruForm({
+                            ...newSoruForm,
+                            secenekler: newSecenekler,
+                          });
+                        }}
+                        placeholder={`${String.fromCharCode(
+                          65 + index
+                        )} seçeneği...`}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Cevap Açıklaması */}
+                <div className="mb-3">
+                  <label className="form-label fw-bold">
+                    Cevap Açıklaması: <span className="text-danger">*</span>
+                  </label>
+                  <textarea
                     className="form-control"
-                    value={secenek}
-                    onChange={(e) => {
-                      const newSecenekler = [...newSoruForm.secenekler];
-                      newSecenekler[index] = e.target.value;
-                      setNewSoruForm({
-                        ...newSoruForm,
-                        secenekler: newSecenekler,
-                      });
-                    }}
-                    placeholder={`${String.fromCharCode(
-                      65 + index
-                    )} seçeneği...`}
+                    rows={3}
+                    value={newSoruForm.cevap}
+                    onChange={(e) =>
+                      setNewSoruForm({ ...newSoruForm, cevap: e.target.value })
+                    }
+                    placeholder="Doğru cevabın açıklamasını yazın..."
+                    required
                   />
                 </div>
-              ))}
-            </div>
-
-            {/* Cevap Açıklaması */}
-            <div className="mb-3">
-              <label className="form-label fw-bold">
-                Cevap Açıklaması: <span className="text-danger">*</span>
-              </label>
-              <textarea
-                className="form-control"
-                rows={3}
-                value={newSoruForm.cevap}
-                onChange={(e) =>
-                  setNewSoruForm({ ...newSoruForm, cevap: e.target.value })
-                }
-                placeholder="Doğru cevabın açıklamasını yazın..."
-                required
-              />
-            </div>
+              </>
+            )}
 
             {/* Zorluk ve Konu */}
             <div className="row">
@@ -694,21 +1378,23 @@ export default function AdminSorularPage({
               </div>
             </div>
 
-            {/* Açıklama */}
-            <div className="mb-3">
-              <label className="form-label fw-bold">
-                Açıklama (Opsiyonel):
-              </label>
-              <textarea
-                className="form-control"
-                rows={2}
-                value={newSoruForm.aciklama}
-                onChange={(e) =>
-                  setNewSoruForm({ ...newSoruForm, aciklama: e.target.value })
-                }
-                placeholder="Soru hakkında ek bilgi varsa yazın..."
-              />
-            </div>
+            {/* Açıklama - Doğru-yanlış için opsiyonel */}
+            {denemeType !== "dogruyanlis" && (
+              <div className="mb-3">
+                <label className="form-label fw-bold">
+                  Açıklama (Opsiyonel):
+                </label>
+                <textarea
+                  className="form-control"
+                  rows={2}
+                  value={newSoruForm.aciklama}
+                  onChange={(e) =>
+                    setNewSoruForm({ ...newSoruForm, aciklama: e.target.value })
+                  }
+                  placeholder="Soru hakkında ek bilgi varsa yazın..."
+                />
+              </div>
+            )}
 
             {/* Butonlar */}
             <div className="d-flex gap-2 justify-content-end">
@@ -745,7 +1431,9 @@ export default function AdminSorularPage({
           <div className="p-3">
             <div className="mb-3">
               <h6 className="fw-bold">Soru:</h6>
-              <p className="border p-3 rounded bg-light">{selectedSoru.soru}</p>
+              <p className="border p-3 rounded bg-light  text-dark">
+                {selectedSoru.soru}
+              </p>
             </div>
 
             <div className="mb-3">
@@ -753,7 +1441,7 @@ export default function AdminSorularPage({
               {selectedSoru.secenekler.map((secenek, index) => (
                 <div
                   key={index}
-                  className={`p-2 mb-2 rounded ${
+                  className={`p-2 mb-2 rounded text-dark ${
                     index === selectedSoru.dogruSecenek
                       ? "bg-success text-white"
                       : "bg-light"
@@ -769,7 +1457,7 @@ export default function AdminSorularPage({
               <span className="badge bg-success fs-6">
                 {String.fromCharCode(65 + selectedSoru.dogruSecenek)}
               </span>
-              <p className="mt-2">{selectedSoru.cevap}</p>
+              <p className="mt-2 text-dark">{selectedSoru.cevap}</p>
             </div>
 
             <div className="row">
@@ -824,51 +1512,109 @@ export default function AdminSorularPage({
               />
             </div>
 
-            {/* Seçenekler */}
-            <div className="mb-3">
-              <label className="form-label fw-bold">Seçenekler:</label>
-              {editForm.secenekler.map((secenek, index) => (
-                <div key={index} className="input-group mb-2">
-                  <span className="input-group-text">
+            {/* Doğru-Yanlış için özel seçenekler */}
+            {denemeType === "dogruyanlis" ? (
+              <div className="mb-3">
+                <label className="form-label fw-bold">
+                  Doğru Cevap: <span className="text-danger">*</span>
+                </label>
+                <div className="alert alert-info">
+                  <i className="bi bi-info-circle me-2"></i>
+                  Sorunun doğru cevabını seçin.
+                </div>
+                <div className="d-flex gap-3">
+                  <div className="form-check form-check-lg">
                     <input
+                      className="form-check-input"
                       type="radio"
-                      name="dogruSecenek"
-                      checked={editForm.dogruSecenek === index}
+                      name="dogruSecenekEdit"
+                      id="dogruSecenekEdit0"
+                      checked={editForm.dogruSecenek === 0}
                       onChange={() =>
-                        setEditForm({ ...editForm, dogruSecenek: index })
+                        setEditForm({ ...editForm, dogruSecenek: 0 })
                       }
-                      className="form-check-input me-2"
                     />
-                    {String.fromCharCode(65 + index)}.
-                  </span>
-                  <input
-                    type="text"
+                    <label
+                      className="form-check-label"
+                      htmlFor="dogruSecenekEdit0"
+                    >
+                      <strong>Doğru</strong>
+                    </label>
+                  </div>
+                  <div className="form-check form-check-lg">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="dogruSecenekEdit"
+                      id="dogruSecenekEdit1"
+                      checked={editForm.dogruSecenek === 1}
+                      onChange={() =>
+                        setEditForm({ ...editForm, dogruSecenek: 1 })
+                      }
+                    />
+                    <label
+                      className="form-check-label"
+                      htmlFor="dogruSecenekEdit1"
+                    >
+                      <strong>Yanlış</strong>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Seçenekler */}
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Seçenekler:</label>
+                  {editForm.secenekler.map((secenek, index) => (
+                    <div key={index} className="input-group mb-2">
+                      <span className="input-group-text">
+                        <input
+                          type="radio"
+                          name="dogruSecenek"
+                          checked={editForm.dogruSecenek === index}
+                          onChange={() =>
+                            setEditForm({ ...editForm, dogruSecenek: index })
+                          }
+                          className="form-check-input me-2"
+                        />
+                        {String.fromCharCode(65 + index)}.
+                      </span>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={secenek}
+                        onChange={(e) => {
+                          const newSecenekler = [...editForm.secenekler];
+                          newSecenekler[index] = e.target.value;
+                          setEditForm({
+                            ...editForm,
+                            secenekler: newSecenekler,
+                          });
+                        }}
+                        required
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Cevap Açıklaması */}
+                <div className="mb-3">
+                  <label className="form-label fw-bold">
+                    Cevap Açıklaması:
+                  </label>
+                  <textarea
                     className="form-control"
-                    value={secenek}
-                    onChange={(e) => {
-                      const newSecenekler = [...editForm.secenekler];
-                      newSecenekler[index] = e.target.value;
-                      setEditForm({ ...editForm, secenekler: newSecenekler });
-                    }}
+                    rows={3}
+                    value={editForm.cevap}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, cevap: e.target.value })
+                    }
                     required
                   />
                 </div>
-              ))}
-            </div>
-
-            {/* Cevap Açıklaması */}
-            <div className="mb-3">
-              <label className="form-label fw-bold">Cevap Açıklaması:</label>
-              <textarea
-                className="form-control"
-                rows={3}
-                value={editForm.cevap}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, cevap: e.target.value })
-                }
-                required
-              />
-            </div>
+              </>
+            )}
 
             {/* Zorluk ve Konu */}
             <div className="row">
@@ -959,6 +1705,20 @@ export default function AdminSorularPage({
         cancelText="İptal"
         confirmVariant="danger"
         icon="bi-trash"
+      />
+
+      {/* Excel Import Modal */}
+      <ExcelImportModal
+        isOpen={showExcelModal}
+        onClose={() => setShowExcelModal(false)}
+        onFileSelect={handleExcelImport}
+        title={excelModalConfig.title}
+        description={excelModalConfig.description}
+        columns={excelModalConfig.columns}
+        exampleData={excelModalConfig.exampleData}
+        accept={excelModalConfig.accept}
+        buttonText={excelModalConfig.buttonText}
+        buttonIcon={excelModalConfig.buttonIcon}
       />
     </AdminGuard>
   );

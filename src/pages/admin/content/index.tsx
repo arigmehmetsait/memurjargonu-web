@@ -78,7 +78,7 @@ export default function ContentManagement() {
                       </p>
                       <Link
                         href="/admin/denemeler-yonetimi"
-                        className="btn btn-success w-100"
+                        className="btn btn-primary w-100"
                       >
                         <i className="bi bi-arrow-right me-2"></i>
                         Denemeleri Yönet
@@ -103,7 +103,7 @@ export default function ContentManagement() {
                       <div className="mt-auto">
                         <Link
                           href="/admin/dogru-yanlis"
-                          className="btn btn-warning w-100"
+                          className="btn btn-primary w-100"
                         >
                           <i className="bi bi-arrow-right me-2"></i>
                           Doğru-Yanlış Yönet
@@ -129,7 +129,7 @@ export default function ContentManagement() {
                       <div className="mt-auto">
                         <Link
                           href="/admin/bosluk-doldurma"
-                          className="btn btn-info w-100"
+                          className="btn btn-primary w-100"
                         >
                           <i className="bi bi-arrow-right me-2"></i>
                           Boşluk Doldurma Yönet
@@ -138,6 +138,88 @@ export default function ContentManagement() {
                     </div>
                   </div>
                 </div>
+
+                <div className="col-md-6 col-lg-4">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
+                      <div className="admin-icon mb-3">
+                        <i className="bi bi-diagram-3"></i>
+                      </div>
+                      <h5 className="card-title fw-bold">
+                        Eşleştirmeler Yönetimi
+                      </h5>
+                      <p className="card-text text-muted">
+                        Eşleştirme dokümanlarını yönetin, level'ları düzenleyin
+                        ve soruları ekleyin.
+                      </p>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/eslestirmeler"
+                          className="btn btn-primary w-100"
+                          style={{
+                            backgroundColor: "#6f42c1",
+                            borderColor: "#6f42c1",
+                            color: "white",
+                          }}
+                        >
+                          <i className="bi bi-arrow-right me-2"></i>
+                          Eşleştirmeleri Yönet
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-md-6 col-lg-4">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
+                      <div className="admin-icon mb-3">
+                        <i className="bi bi-play-circle"></i>
+                      </div>
+                      <h5 className="card-title fw-bold">
+                        Eğitim Videoları Yönetimi
+                      </h5>
+                      <p className="card-text text-muted">
+                        Eğitim videolarını yönetin, YouTube videoları ekleyin ve
+                        düzenleyin.
+                      </p>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/egitim-videolari"
+                          className="btn btn-primary w-100"
+                        >
+                          <i className="bi bi-arrow-right me-2"></i>
+                          Videoları Yönet
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* <div className="col-md-6 col-lg-4">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
+                      <div className="admin-icon mb-3">
+                        <i className="bi bi-clock-history"></i>
+                      </div>
+                      <h5 className="card-title fw-bold">
+                        PDF Dosyaları Yönetimi
+                      </h5>
+                      <p className="card-text text-muted">
+                        PDF dosyalarını yönetin, soruları ekleyin ve düzenleyin.
+                      </p>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/pdf-files"
+                          className="btn btn-primary w-100"
+                        >
+                          <i className="bi bi-arrow-right me-2"></i>
+                          PDF'leri Yönet
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div> */}
               </div>
             </div>
           </div>

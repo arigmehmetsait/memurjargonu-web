@@ -9,6 +9,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import CreateTimedExamModal from "@/components/admin/CreateTimedExamModal";
 import { TimedExamListItem, TimedExamStats } from "@/types/timedExam";
 import { formatDate } from "@/utils/formatDate";
+import { toast } from "react-toastify";
 
 export default function AdminTimedExams() {
   const router = useRouter();
@@ -79,12 +80,13 @@ export default function AdminTimedExams() {
         await fetchStats();
         setShowDeleteModal(false);
         setSelectedExam(null);
+        toast.success("Sınav başarıyla silindi");
       } else {
-        alert(result.error || "Sınav silinemedi");
+        toast.error(result.error || "Sınav silinemedi");
       }
     } catch (error) {
       console.error("Sınav silme hatası:", error);
-      alert("Bir hata oluştu. Lütfen tekrar deneyin.");
+      toast.error("Bir hata oluştu. Lütfen tekrar deneyin.");
     }
   };
 

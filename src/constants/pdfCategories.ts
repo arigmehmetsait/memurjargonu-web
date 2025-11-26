@@ -60,6 +60,15 @@ export const PDF_CATEGORY_INFO: Record<PDFSubcategory, CategoryInfo> = {
     packageTypes: [PackageType.AGS_FULL],
   },
 
+  [PDFSubcategory.TARIH]: {
+    category: PDFCategory.AGS,
+    subcategory: PDFSubcategory.TARIH,
+    name: "Tarih",
+    description: "Tarih PDF dosyalarını ve sorularını yönetin",
+    icon: "bi-clock-history",
+    packageTypes: [],
+  },
+
   // KPSS Kategorileri
   // [PDFSubcategory.KPSS_TARIH]: {
   //   category: PDFCategory.KPSS,
@@ -141,6 +150,7 @@ export const getFirebaseCollectionName = (
     // [PDFSubcategory.AGS_TURK_MILLI_EGITIM]: "AgsTurkMilliEgitimPdf",
     [PDFSubcategory.AGS_COGRAFYA]: "CografyaPdfFiles",
     [PDFSubcategory.AGS_GUNCEL_BILGILER]: "GuncelBilgilerPdf",
+    [PDFSubcategory.TARIH]: "pdfFiles",
 
     // [PDFSubcategory.KPSS_TARIH]: "KpssTarihPdf",
     // [PDFSubcategory.KPSS_COGRAFYA]: "KpssCografyaPdf",

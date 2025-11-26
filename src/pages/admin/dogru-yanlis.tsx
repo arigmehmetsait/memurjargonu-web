@@ -4,6 +4,7 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { toast } from "react-toastify";
 
 interface DogruYanlisDeneme {
   id: string;
@@ -24,6 +25,13 @@ export default function AdminDogruYanlisPage() {
   const [newDenemeName, setNewDenemeName] = useState("");
   const [newDenemeDescription, setNewDenemeDescription] = useState("");
   const [creating, setCreating] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [denemeToEdit, setDenemeToEdit] = useState<DogruYanlisDeneme | null>(
+    null
+  );
+  const [editDenemeName, setEditDenemeName] = useState("");
+  const [editDenemeDescription, setEditDenemeDescription] = useState("");
+  const [updating, setUpdating] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [denemeToDelete, setDenemeToDelete] =
     useState<DogruYanlisDeneme | null>(null);
@@ -61,7 +69,7 @@ export default function AdminDogruYanlisPage() {
 
   const handleCreateDeneme = async () => {
     if (!newDenemeName.trim()) {
-      alert("Deneme adı gereklidir");
+      toast.warn("Deneme adı gereklidir");
       return;
     }
 
@@ -87,13 +95,13 @@ export default function AdminDogruYanlisPage() {
         setNewDenemeName("");
         setNewDenemeDescription("");
         await fetchDenemeler();
-        alert("Doğru-Yanlış denemesi başarıyla oluşturuldu!");
+        toast.success("Doğru-Yanlış denemesi başarıyla oluşturuldu!");
       } else {
-        alert("Hata: " + data.error);
+        toast.error(data.error || "Deneme oluşturulamadı");
       }
     } catch (err) {
       console.error("Doğru-Yanlış denemesi oluşturma hatası:", err);
-      alert("Doğru-Yanlış denemesi oluşturulurken bir hata oluştu");
+      toast.error("Doğru-Yanlış denemesi oluşturulurken bir hata oluştu");
     } finally {
       setCreating(false);
     }
@@ -102,6 +110,53 @@ export default function AdminDogruYanlisPage() {
   const handleDeleteClick = (deneme: DogruYanlisDeneme) => {
     setDenemeToDelete(deneme);
     setShowDeleteModal(true);
+  };
+
+  const handleEditClick = (deneme: DogruYanlisDeneme) => {
+    setDenemeToEdit(deneme);
+    setEditDenemeName(deneme.name);
+    setEditDenemeDescription(deneme.description || "");
+    setShowEditModal(true);
+  };
+
+  const handleUpdateDeneme = async () => {
+    if (!denemeToEdit) return;
+
+    if (!editDenemeName.trim()) {
+      toast.warn("Deneme adı gereklidir");
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      const response = await fetch("/api/admin/dogru-yanlis/update", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          denemeId: denemeToEdit.id,
+          name: editDenemeName.trim(),
+          description: editDenemeDescription.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("Doğru-Yanlış denemesi güncellendi");
+        setShowEditModal(false);
+        setDenemeToEdit(null);
+        await fetchDenemeler();
+      } else {
+        toast.error(data.error || "Deneme güncellenemedi");
+      }
+    } catch (err) {
+      console.error("Doğru-Yanlış denemesi güncellenirken hata:", err);
+      toast.error("Deneme güncellenirken bir hata oluştu");
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -124,15 +179,15 @@ export default function AdminDogruYanlisPage() {
         setShowDeleteModal(false);
         setDenemeToDelete(null);
         fetchDenemeler(); // Listeyi yenile
-        alert(
-          `"${data.data.denemeName}" doğru-yanlış denemesi başarıyla silindi. ${data.data.deletedQuestionsCount} soru da silindi.`
+        toast.success(
+          `"${data.data.denemeName}" doğru-yanlış denemesi silindi. ${data.data.deletedQuestionsCount} soru da silindi.`
         );
       } else {
-        alert("Hata: " + data.error);
+        toast.error(data.error || "Deneme silinemedi");
       }
     } catch (err) {
       console.error("Doğru-Yanlış denemesi silme hatası:", err);
-      alert("Doğru-Yanlış denemesi silinirken bir hata oluştu");
+      toast.error("Doğru-Yanlış denemesi silinirken bir hata oluştu");
     } finally {
       setDeleting(false);
     }
@@ -248,7 +303,7 @@ export default function AdminDogruYanlisPage() {
                         </td>
                         <td>
                           <div className="btn-group" role="group">
-                            <button
+                            {/* <button
                               className="btn btn-outline-primary btn-sm"
                               title="Denemeyi Görüntüle (Kullanıcı Görünümü)"
                               onClick={() => {
@@ -270,7 +325,7 @@ export default function AdminDogruYanlisPage() {
                               }}
                             >
                               <i className="bi bi-collection"></i>
-                            </button>
+                            </button> */}
                             <button
                               className="btn btn-outline-success btn-sm"
                               title="Soruları Yönet (Admin Görünümü)"
@@ -287,6 +342,7 @@ export default function AdminDogruYanlisPage() {
                             <button
                               className="btn btn-outline-warning btn-sm"
                               title="Düzenle"
+                              onClick={() => handleEditClick(deneme)}
                             >
                               <i className="bi bi-pencil"></i>
                             </button>
@@ -325,7 +381,7 @@ export default function AdminDogruYanlisPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="col-md-6">
+                  {/* <div className="col-md-6">
                     <div className="card bg-light">
                       <div className="card-body">
                         <h5 className="card-title">
@@ -344,7 +400,7 @@ export default function AdminDogruYanlisPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}
@@ -437,6 +493,99 @@ export default function AdminDogruYanlisPage() {
         </div>
       )}
 
+      {/* Deneme Düzenleme Modal */}
+      {showEditModal && denemeToEdit && (
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header bg-warning">
+                <h5 className="modal-title text-dark">
+                  <i className="bi bi-pencil me-2"></i>
+                  Denemeyi Düzenle
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => {
+                    if (updating) return;
+                    setShowEditModal(false);
+                    setDenemeToEdit(null);
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label htmlFor="editDenemeName" className="form-label">
+                    Deneme Adı <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="editDenemeName"
+                    className="form-control"
+                    value={editDenemeName}
+                    onChange={(e) => setEditDenemeName(e.target.value)}
+                    disabled={updating}
+                    placeholder="Deneme adını güncelleyin"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="editDenemeDescription" className="form-label">
+                    Açıklama
+                  </label>
+                  <textarea
+                    id="editDenemeDescription"
+                    className="form-control"
+                    rows={3}
+                    value={editDenemeDescription}
+                    onChange={(e) => setEditDenemeDescription(e.target.value)}
+                    disabled={updating}
+                    placeholder="Deneme açıklamasını güncelleyin (opsiyonel)"
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    if (updating) return;
+                    setShowEditModal(false);
+                    setDenemeToEdit(null);
+                  }}
+                  disabled={updating}
+                >
+                  İptal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-warning"
+                  onClick={handleUpdateDeneme}
+                  disabled={updating || !editDenemeName.trim()}
+                >
+                  {updating ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                      ></span>
+                      Güncelleniyor...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check-circle me-2"></i>
+                      Güncelle
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Silme Onay Modalı */}
       {showDeleteModal && denemeToDelete && (
         <div
@@ -465,11 +614,11 @@ export default function AdminDogruYanlisPage() {
                   <i className="bi bi-exclamation-triangle me-2"></i>
                   <strong>Dikkat!</strong> Bu işlem geri alınamaz.
                 </div>
-                <p>
+                <p className="text-dark">
                   <strong>"{denemeToDelete.name}"</strong> doğru-yanlış
                   denemesini silmek istediğinizden emin misiniz?
                 </p>
-                <div className="bg-light p-3 rounded">
+                <div className="bg-light p-3 rounded text-dark">
                   <h6>Silinecek İçerik:</h6>
                   <ul className="mb-0">
                     <li>Deneme dokümanı</li>

@@ -248,9 +248,14 @@ export default function AddPDF() {
       setSelectedFile(null);
       setUploadProgress(0);
 
-      // 2 saniye sonra liste sayfasına yönlendir
+      // 2 saniye sonra ilgili kategori liste sayfasına yönlendir
       setTimeout(() => {
-        router.push("/admin/content");
+        const subcategory = formData.subcategory;
+        if (subcategory === PDFSubcategory.TARIH) {
+          router.push("/admin/pdf-files");
+        } else {
+          router.push(`/admin/content/list?subcategory=${subcategory}`);
+        }
       }, 2000);
     } catch (error: any) {
       console.error("Upload error:", error);

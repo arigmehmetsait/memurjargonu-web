@@ -84,6 +84,37 @@ export class PDFService {
   ): PDFDocument {
     const data = doc.data();
 
+    // Tarih kategorisi için özel handling (pdfFiles koleksiyonu)
+    if (subcategory === PDFSubcategory.TARIH) {
+      return {
+        id: doc.id,
+        title: data.title || "Başlıksız PDF",
+        description: "",
+        category: PDFCategory.AGS,
+        subcategory,
+        pdfUrl: data.pdfUrl || "",
+        fileName: data.title || "unknown.pdf",
+        fileSize: 0,
+        visibleInPackages: [],
+        isPremiumOnly: false,
+        status: PDFStatus.ACTIVE,
+        sortOrder: 1,
+        tags: [],
+        createdAt: data.createdAt
+          ? data.createdAt.toDate
+            ? data.createdAt.toDate()
+            : data.createdAt
+          : new Date(),
+        updatedAt: data.updatedAt
+          ? data.updatedAt.toDate
+            ? data.updatedAt.toDate()
+            : data.updatedAt
+          : new Date(),
+        createdBy: data.createdBy || "system",
+        updatedBy: data.updatedBy || "system",
+      } as PDFDocument;
+    }
+
     // Mevcut Firebase veri yapısını yeni interface'e uyarla
     return {
       id: doc.id,
@@ -374,18 +405,29 @@ export class PDFService {
   async updatePDF(
     subcategory: PDFSubcategory,
     pdfId: string,
-    updates: Partial<PDFDocumentRequest>,
+    updates: Partial<PDFDocumentRequest> & {
+      pdfUrl?: string;
+      fileName?: string;
+      fileSize?: number;
+    },
     adminUserId: string
   ): Promise<PDFUploadResponse> {
     try {
       const collectionName = getFirebaseCollectionName(subcategory);
       const now = Timestamp.now();
 
-      const updateData = {
-        ...updates,
+      const { pdfUrl, fileName, fileSize, ...pdfRequestUpdates } = updates;
+
+      const updateData: Record<string, any> = {
+        ...pdfRequestUpdates,
         updatedAt: now,
         updatedBy: adminUserId,
       };
+
+      // PDF dosyası bilgileri varsa ekle
+      if (pdfUrl !== undefined) updateData.pdfUrl = pdfUrl;
+      if (fileName !== undefined) updateData.fileName = fileName;
+      if (fileSize !== undefined) updateData.fileSize = fileSize;
 
       await adminDb.collection(collectionName).doc(pdfId).update(updateData);
 
