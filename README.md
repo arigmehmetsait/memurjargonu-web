@@ -2,6 +2,34 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment Variables
+
+Create a `.env.local` file in the root directory with the following Firebase configuration variables:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+```
+
+You can find these values in your Firebase Console:
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Select your project
+3. Click the gear icon → Project settings
+4. Under "Your apps", select your web app (or create one)
+5. Copy the configuration values
+
+**Note:** Make sure Google Sign-In is enabled in Firebase Authentication:
+
+- Go to Authentication → Sign-in method
+- Enable the Google provider
+
+### Running the Development Server
+
 First, run the development server:
 
 ```bash

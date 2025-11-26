@@ -117,56 +117,6 @@ export default function PDFManagement() {
                 </p>
               </div>
 
-              {/* Quick Stats */}
-              <div className="row mb-5">
-                <div className="col-md-3">
-                  <div className="card bg-primary text-white h-100">
-                    <div className="card-body text-center">
-                      <i className="bi bi-files display-4 mb-2"></i>
-                      <h3 className="fw-bold">
-                        {loading ? "..." : stats?.totalCount || 0}
-                      </h3>
-                      <p className="mb-0">Toplam PDF</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="card bg-success text-white h-100">
-                    <div className="card-body text-center">
-                      <i className="bi bi-check-circle display-4 mb-2"></i>
-                      <h3 className="fw-bold">
-                        {loading ? "..." : stats?.countByStatus.active || 0}
-                      </h3>
-                      <p className="mb-0">Aktif PDF</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="card bg-warning text-white h-100">
-                    <div className="card-body text-center">
-                      <i className="bi bi-exclamation-triangle display-4 mb-2"></i>
-                      <h3 className="fw-bold">
-                        {loading ? "..." : stats?.countByStatus.draft || 0}
-                      </h3>
-                      <p className="mb-0">Taslak PDF</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-md-3">
-                  <div className="card bg-info text-white h-100">
-                    <div className="card-body text-center">
-                      <i className="bi bi-hdd display-4 mb-2"></i>
-                      <h3 className="fw-bold">
-                        {loading
-                          ? "..."
-                          : formatFileSize(stats?.totalFileSize || 0)}
-                      </h3>
-                      <p className="mb-0">Toplam Boyut</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               {/* Action Buttons */}
               <div className="row mb-4">
                 <div className="col-12">
@@ -185,27 +135,27 @@ export default function PDFManagement() {
                             <i className="bi bi-plus-circle me-2"></i>
                             Yeni PDF Ekle
                           </Link>
-                          <Link
+                          {/* <Link
                             href="/admin/content/bulk-upload"
                             className="btn btn-outline-primary"
                           >
                             <i className="bi bi-cloud-upload me-2"></i>
                             Toplu Yükleme
-                          </Link>
-                          <Link
+                          </Link> */}
+                          {/* <Link
                             href="/admin/content/list"
                             className="btn btn-outline-info"
                           >
                             <i className="bi bi-list me-2"></i>
                             Tüm PDF'leri Görüntüle
-                          </Link>
-                          <Link
+                          </Link> */}
+                          {/* <Link
                             href="/admin/content/categories"
                             className="btn btn-outline-secondary"
                           >
                             <i className="bi bi-tags me-2"></i>
                             Kategori Yönetimi
-                          </Link>
+                          </Link> */}
                         </div>
                       </div>
                     </div>
@@ -321,7 +271,11 @@ export default function PDFManagement() {
                               PDF'leri Görüntüle ({count})
                             </Link>
                             <Link
-                              href={`/admin/content/add-pdf?subcategory=${subcategory}`}
+                              href={
+                                subcategory === PDFSubcategory.TARIH
+                                  ? "/admin/pdf-files/new"
+                                  : `/admin/content/add-pdf?subcategory=${subcategory}`
+                              }
                               className="btn btn-primary btn-sm"
                             >
                               <i className="bi bi-plus me-1"></i>

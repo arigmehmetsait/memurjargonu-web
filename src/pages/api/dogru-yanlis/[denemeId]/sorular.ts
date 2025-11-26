@@ -40,19 +40,23 @@ export default async function handler(
     const sorular = sorularSnapshot.docs.map((doc) => {
       const data = doc.data();
 
+      // Resimdeki modele göre sadece text ve correct alanları
+      const soruText = data.text || "Soru metni bulunamadı";
+      const correctAnswer = data.correct || "Cevap bulunamadı";
+
       // Firebase'den gelen veriyi frontend formatına çevir
       const soru = {
         id: doc.id,
-        soru: data.questionText || "Soru metni bulunamadı",
-        cevap: data.correctAnswer || "Cevap bulunamadı",
-        secenekler: data.options || ["Doğru", "Yanlış"],
+        soru: soruText,
+        cevap: correctAnswer,
+        secenekler: ["Doğru", "Yanlış"],
         dogruSecenek: 0, // Varsayılan değer
-        aciklama: data.explanation || "",
-        zorluk: data.difficulty || "orta",
-        konu: data.subject || "Doğru-Yanlış",
-        createdAt: data.createdAt?.toDate?.() || data.createdAt,
-        updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-        status: data.status || "active",
+        aciklama: "",
+        zorluk: "orta",
+        konu: "Doğru-Yanlış",
+        createdAt: null,
+        updatedAt: null,
+        status: "active",
       };
 
       // Doğru cevabı bul ve index'ini hesapla

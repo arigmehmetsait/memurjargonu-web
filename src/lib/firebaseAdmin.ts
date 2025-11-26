@@ -1,6 +1,7 @@
 import { cert, getApp, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 /**
  * Desteklediğimiz giriş yolları:
@@ -90,9 +91,19 @@ function loadServiceAccount(): any {
 
 const sa = loadServiceAccount();
 
+// Firebase Storage bucket adını environment variable'dan al
+const storageBucket =
+  process.env.FIREBASE_STORAGE_BUCKET ||
+  process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+  "kpssapp-7cc8b.appspot.com";
+
 export const adminApp = getApps().length
   ? getApp()
-  : initializeApp({ credential: cert(sa) });
+  : initializeApp({
+      credential: cert(sa),
+      storageBucket: storageBucket,
+    });
 
 export const adminAuth = getAuth(adminApp);
 export const adminDb = getFirestore(adminApp);
+export const adminStorage = getStorage(adminApp);

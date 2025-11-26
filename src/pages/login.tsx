@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "@/lib/firebase";
 import { useRouter } from "next/router";
 import Link from "next/link";
 
@@ -10,7 +10,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
+
+  // Ortak yönlendirme fonksiyonu
+  const handleRedirect = async (user: any) => {
+    const tokenResult = await user.getIdTokenResult(true);
+    const isAdmin = tokenResult.claims?.admin === true;
+
+    setTimeout(() => {
+      if (isAdmin) {
+        router.push("/admin");
+      } else {
+        router.push("/");
+      }
+    }, 1500);
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,22 +38,34 @@ export default function LoginPage() {
       // ✅ Kullanıcı UID'ini ekranda gösterelim
       setMsg(`Giriş başarılı ✅ `);
 
-      // Token'ı al ve admin kontrolü yap
-      const tokenResult = await cred.user.getIdTokenResult(true);
-      const isAdmin = tokenResult.claims?.admin === true;
-
-      // 1.5 saniye bekle ki kullanıcı başarı mesajını görebilsin, sonra yönlendir
-      setTimeout(() => {
-        if (isAdmin) {
-          router.push("/admin");
-        } else {
-          router.push("/");
-        }
-      }, 1500);
+      // Yönlendirme
+      await handleRedirect(cred.user);
     } catch (e: any) {
       setMsg(`Giriş hatası ❌: ${e.message ?? "Bilinmeyen hata"}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setMsg(null);
+    setGoogleLoading(true);
+
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+
+      // ✅ Kullanıcı UID'ini ekranda gösterelim
+      setMsg(`Google ile giriş başarılı ✅ `);
+
+      // Yönlendirme
+      await handleRedirect(cred.user);
+    } catch (e: any) {
+      // Kullanıcı popup'ı kapattıysa hata gösterme
+      if (e.code !== "auth/popup-closed-by-user") {
+        setMsg(`Google giriş hatası ❌: ${e.message ?? "Bilinmeyen hata"}`);
+      }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -97,7 +124,7 @@ export default function LoginPage() {
                   <button
                     type="submit"
                     className="btn btn-primary btn-lg w-100 mb-3"
-                    disabled={loading}
+                    disabled={loading || googleLoading}
                   >
                     {loading ? (
                       <>
@@ -116,6 +143,62 @@ export default function LoginPage() {
                     )}
                   </button>
                 </form>
+
+                {/* Divider */}
+                <div className="d-flex align-items-center my-4">
+                  <div className="flex-grow-1 border-top"></div>
+                  <span className="px-3 text-muted small">veya</span>
+                  <div className="flex-grow-1 border-top"></div>
+                </div>
+
+                {/* Google Sign-In Button */}
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-lg w-100"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading || googleLoading}
+                >
+                  {googleLoading ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
+                      Google ile giriş yapılıyor...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        className="me-2"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 18 18"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <g fill="none" fillRule="evenodd">
+                          <path
+                            d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7955 2.7164v2.2581h2.9087c1.7023-1.5668 2.6837-3.874 2.6837-6.615z"
+                            fill="#4285F4"
+                          />
+                          <path
+                            d="M9 18c2.43 0 4.4673-.805 5.9564-2.1805l-2.9087-2.2581c-.8059.54-1.8368.859-3.0477.859-2.344 0-4.3282-1.5831-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z"
+                            fill="#34A853"
+                          />
+                          <path
+                            d="M3.964 10.71c-.18-.54-.2822-1.1173-.2822-1.71s.1023-1.17.2823-1.71V4.9582H.9573C.3477 6.1732 0 7.5477 0 9s.3486 2.8268.9573 4.0418L3.964 10.71z"
+                            fill="#FBBC05"
+                          />
+                          <path
+                            d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.3459l2.5813-2.5814C13.4632.8918 11.4268 0 9 0 5.4818 0 2.4382 2.0168.9574 4.9582L3.964 7.29C4.6718 5.1627 6.6559 3.5795 9 3.5795z"
+                            fill="#EA4335"
+                          />
+                        </g>
+                      </svg>
+                      Google ile Devam Et
+                    </>
+                  )}
+                </button>
 
                 {/* Message */}
                 {msg && (

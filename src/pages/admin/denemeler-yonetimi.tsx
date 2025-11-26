@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import AdminDenemeTable from "@/components/AdminDenemeTable";
 import CreateDenemeModal from "@/components/CreateDenemeModal";
+import { toast } from "react-toastify";
 
 export default function AdminDenemelerYonetimiPage() {
   const router = useRouter();
@@ -20,7 +21,9 @@ export default function AdminDenemelerYonetimiPage() {
 
   const handleEditClick = (deneme: any) => {
     // TODO: Düzenleme modalı veya sayfası
-    alert(`"${deneme.name}" denemesi düzenleme özelliği henüz hazır değil.`);
+    toast.info(
+      `"${deneme.name}" denemesi düzenleme özelliği henüz hazır değil.`
+    );
   };
 
   return (

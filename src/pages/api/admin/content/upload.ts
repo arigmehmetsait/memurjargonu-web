@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { adminAuth } from "@/lib/firebaseAdmin";
+import { adminAuth, adminStorage } from "@/lib/firebaseAdmin";
 import { PDFService } from "@/services/pdfService";
 import {
   PDFDocumentRequest,
@@ -107,41 +107,47 @@ export default async function handler(
         .json({ error: "En az bir paket seçmeniz gerekir" });
     }
 
-    // TODO: Firebase Storage'a dosya yükleme
-    // Şimdilik local storage simülasyonu
+    // Firebase Storage'a dosya yükleme
     const fileName = `pdf_${Date.now()}_${uploadedFile.originalFilename}`;
     const fileSize = uploadedFile.size;
+    const storagePath = `pdfs/${fileName}`;
 
-    // Mock PDF URL - gerçekte Firebase Storage URL'i olacak
-    const pdfUrl = `https://firebasestorage.googleapis.com/v0/b/your-bucket/o/pdfs%2F${fileName}?alt=media`;
+    // Firebase Storage bucket'ını al
+    const storageBucket =
+      process.env.FIREBASE_STORAGE_BUCKET ||
+      process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+      "kpssapp-7cc8b.appspot.com";
+    const bucket = adminStorage.bucket(storageBucket);
+    const file = bucket.file(storagePath);
 
-    // TODO: Gerçek Firebase Storage implementasyonu
-    /*
-    import { admin } from "@/lib/firebaseAdmin";
-    
-    const bucket = admin.storage().bucket();
-    const file = bucket.file(`pdfs/${fileName}`);
-    
-    const stream = file.createWriteStream({
+    // Dosyayı Firebase Storage'a yükle
+    const fileBuffer = fs.readFileSync(uploadedFile.filepath);
+    await file.save(fileBuffer, {
       metadata: {
         contentType: "application/pdf",
       },
     });
-    
-    const uploadPromise = new Promise((resolve, reject) => {
-      stream.on('error', reject);
-      stream.on('finish', async () => {
-        await file.makePublic();
-        const publicUrl = `https://storage.googleapis.com/${bucket.name}/pdfs/${fileName}`;
-        resolve(publicUrl);
-      });
+
+    // Dosyayı public yap (token gerektirmeyen erişim için)
+    await file.makePublic();
+
+    // Token içeren URL'i al (signed URL veya metadata'dan token al)
+    // Firebase Storage'dan token içeren URL'i almak için getSignedUrl kullanıyoruz
+    const [signedUrl] = await file.getSignedUrl({
+      action: "read",
+      expires: "03-09-2491", // Çok uzun süreli (yaklaşık 500 yıl)
     });
-    
-    const fileBuffer = fs.readFileSync(uploadedFile.filepath);
-    stream.end(fileBuffer);
-    
-    const pdfUrl = await uploadPromise;
-    */
+
+    // Alternatif: Metadata'dan token'ı al ve URL'e ekle
+    const [metadata] = await file.getMetadata();
+    const token = metadata.metadata?.firebaseStorageDownloadTokens;
+
+    // Token içeren URL oluştur
+    const pdfUrl = token
+      ? `https://firebasestorage.googleapis.com/v0/b/${
+          bucket.name
+        }/o/${encodeURIComponent(storagePath)}?alt=media&token=${token}`
+      : signedUrl;
 
     // PDF'i veritabanına kaydet
     const pdfService = new PDFService();

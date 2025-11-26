@@ -267,7 +267,7 @@ export default function SoruList({
                 </div>
               </div>
             </div>
-            {isAdmin && (
+            {/* {isAdmin && (
               <div className="col-md-6">
                 <div className="card bg-light">
                   <div className="card-body">
@@ -288,7 +288,7 @@ export default function SoruList({
                   </div>
                 </div>
               </div>
-            )}
+            )} */}
           </div>
         </div>
       )}

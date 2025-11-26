@@ -11,7 +11,6 @@ export default function PlansPage() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
-  const [checkoutHtml, setCheckoutHtml] = useState<string | null>(null);
   console.log("plans", plans);
   useEffect(() => {
     const run = async () => {
@@ -53,9 +52,11 @@ export default function PlansPage() {
       if (!r.ok) throw new Error(data?.error || "Checkout failed");
 
       setMsg(
-        `Sipariş oluşturuldu ✅ (orderId: ${data.orderId}). Ödeme penceresi geliyor…`
+        `Sipariş oluşturuldu ✅ (orderId: ${data.orderId}). ${
+          data.message || ""
+        }`
       );
-      setCheckoutHtml(data.checkoutFormContent); // 👈 iyzico HTML
+      setOrderId(data.orderId);
     } catch (e: any) {
       setMsg(`Hata: ${e.message ?? String(e)}`);
     }
@@ -204,25 +205,6 @@ export default function PlansPage() {
                     className="btn-close"
                     onClick={() => setMsg(null)}
                   ></button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Iyzico Checkout Form */}
-          {checkoutHtml && (
-            <div className="row justify-content-center mt-4">
-              <div className="col-lg-8">
-                <div className="card border-primary">
-                  <div className="card-header bg-primary text-white">
-                    <h5 className="mb-0">
-                      <i className="bi bi-credit-card me-2"></i>
-                      Ödeme İşlemi
-                    </h5>
-                  </div>
-                  <div className="card-body">
-                    <div dangerouslySetInnerHTML={{ __html: checkoutHtml }} />
-                  </div>
                 </div>
               </div>
             </div>

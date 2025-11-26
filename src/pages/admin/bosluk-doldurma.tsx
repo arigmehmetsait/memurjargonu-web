@@ -4,6 +4,7 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import { toast } from "react-toastify";
 
 interface BoslukDoldurmaDeneme {
   id: string;
@@ -61,7 +62,7 @@ export default function AdminBoslukDoldurmaPage() {
 
   const handleCreateDeneme = async () => {
     if (!newDenemeName.trim()) {
-      alert("Deneme adı gereklidir");
+      toast.warn("Deneme adı gereklidir");
       return;
     }
 
@@ -87,13 +88,13 @@ export default function AdminBoslukDoldurmaPage() {
         setNewDenemeName("");
         setNewDenemeDescription("");
         await fetchDenemeler();
-        alert("Boşluk Doldurma denemesi başarıyla oluşturuldu!");
+        toast.success("Boşluk Doldurma denemesi başarıyla oluşturuldu!");
       } else {
-        alert("Hata: " + data.error);
+        toast.error(data.error || "Deneme oluşturulamadı");
       }
     } catch (err) {
       console.error("Boşluk Doldurma denemesi oluşturma hatası:", err);
-      alert("Boşluk Doldurma denemesi oluşturulurken bir hata oluştu");
+      toast.error("Boşluk Doldurma denemesi oluşturulurken bir hata oluştu");
     } finally {
       setCreating(false);
     }
@@ -124,15 +125,15 @@ export default function AdminBoslukDoldurmaPage() {
         setShowDeleteModal(false);
         setDenemeToDelete(null);
         fetchDenemeler(); // Listeyi yenile
-        alert(
-          `"${data.data.denemeName}" boşluk doldurma denemesi başarıyla silindi. ${data.data.deletedQuestionsCount} soru da silindi.`
+        toast.success(
+          `"${data.data.denemeName}" boşluk doldurma denemesi silindi. ${data.data.deletedQuestionsCount} soru da silindi.`
         );
       } else {
-        alert("Hata: " + data.error);
+        toast.error(data.error || "Deneme silinemedi");
       }
     } catch (err) {
       console.error("Boşluk Doldurma denemesi silme hatası:", err);
-      alert("Boşluk Doldurma denemesi silinirken bir hata oluştu");
+      toast.error("Boşluk Doldurma denemesi silinirken bir hata oluştu");
     } finally {
       setDeleting(false);
     }
@@ -252,7 +253,7 @@ export default function AdminBoslukDoldurmaPage() {
                         </td>
                         <td>
                           <div className="btn-group" role="group">
-                            <button
+                            {/* <button
                               className="btn btn-outline-primary btn-sm"
                               title="Denemeyi Görüntüle (Kullanıcı Görünümü)"
                               onClick={() => {
@@ -274,7 +275,7 @@ export default function AdminBoslukDoldurmaPage() {
                               }}
                             >
                               <i className="bi bi-collection"></i>
-                            </button>
+                            </button> */}
                             <button
                               className="btn btn-outline-success btn-sm"
                               title="Soruları Yönet (Admin Görünümü)"
@@ -329,7 +330,7 @@ export default function AdminBoslukDoldurmaPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="col-md-6">
+                  {/* <div className="col-md-6">
                     <div className="card bg-light">
                       <div className="card-body">
                         <h5 className="card-title">
@@ -348,7 +349,7 @@ export default function AdminBoslukDoldurmaPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}
@@ -469,11 +470,11 @@ export default function AdminBoslukDoldurmaPage() {
                   <i className="bi bi-exclamation-triangle me-2"></i>
                   <strong>Dikkat!</strong> Bu işlem geri alınamaz.
                 </div>
-                <p>
+                <p className="text-dark">
                   <strong>"{denemeToDelete.name}"</strong> boşluk doldurma
                   denemesini silmek istediğinizden emin misiniz?
                 </p>
-                <div className="bg-light p-3 rounded">
+                <div className="bg-light p-3 rounded text-dark">
                   <h6>Silinecek İçerik:</h6>
                   <ul className="mb-0">
                     <li>Deneme dokümanı</li>

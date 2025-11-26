@@ -35,18 +35,21 @@ export default async function handler(
 
       const sorular = sorularSnapshot.docs.map((doc) => {
         const data = doc.data();
+        // Resimdeki modele göre sadece text ve correct alanları
+        const soruText = data.text || "";
+        const correctAnswer = data.correct || "";
         return {
           id: doc.id,
-          soru: data.questionText || "",
-          cevap: data.correctAnswer || "",
-          secenekler: data.options || ["Doğru", "Yanlış"],
-          dogruSecenek: data.correctAnswer === "Doğru" ? 0 : 1,
-          aciklama: data.explanation || "",
-          zorluk: data.difficulty || "orta",
-          konu: data.subject || "Doğru-Yanlış",
-          createdAt: data.createdAt?.toDate?.() || data.createdAt,
-          updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
-          status: data.status || "active",
+          soru: soruText,
+          cevap: correctAnswer,
+          secenekler: ["Doğru", "Yanlış"],
+          dogruSecenek: correctAnswer === "Doğru" ? 0 : 1,
+          aciklama: "",
+          zorluk: "orta",
+          konu: "Doğru-Yanlış",
+          createdAt: null,
+          updatedAt: null,
+          status: "active",
         };
       });
 
@@ -77,19 +80,21 @@ export default async function handler(
   } else if (req.method === "POST") {
     // Yeni soru ekle
     try {
-      const {
-        questionText,
-        correctAnswer,
-        options,
-        explanation,
-        difficulty,
-        subject,
-      } = req.body;
+      // Resimdeki modele göre sadece text ve correct alanları
+      const text = req.body.text;
+      const correct = req.body.correct;
 
-      if (!questionText || !questionText.trim()) {
+      if (!text || !text.trim()) {
         return res.status(400).json({
           success: false,
           error: "Soru metni gereklidir",
+        });
+      }
+
+      if (!correct || (correct !== "Doğru" && correct !== "Yanlış")) {
+        return res.status(400).json({
+          success: false,
+          error: "Doğru cevap 'Doğru' veya 'Yanlış' olmalıdır",
         });
       }
 
@@ -111,17 +116,10 @@ export default async function handler(
       const yeniSoruNumarasi = sorularSnapshot.size + 1;
       const soruId = `soru${yeniSoruNumarasi}`;
 
-      // Soru verisini oluştur
+      // Soru verisini oluştur - resimdeki modele göre sadece text ve correct
       const soruData = {
-        questionText: questionText.trim(),
-        correctAnswer: correctAnswer || "Doğru",
-        options: options || ["Doğru", "Yanlış"],
-        explanation: explanation?.trim() || "",
-        difficulty: difficulty || "orta",
-        subject: subject || "Doğru-Yanlış",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        status: "active",
+        text: text.trim(),
+        correct: correct,
       };
 
       // Soruyu ekle

@@ -17,6 +17,7 @@ export enum PDFSubcategory {
   AGS_MEVZUAT_VATANDASLIK = "ags_mevzuat_vatandaslik",
   AGS_COGRAFYA = "ags_cografya",
   AGS_GUNCEL_BILGILER = "ags_guncel_bilgiler",
+  TARIH = "tarih",
 
   // KPSS Alt Kategorileri
   // KPSS_TARIH = "kpss_tarih",

@@ -22,19 +22,21 @@ export default async function handler(
   if (req.method === "PUT") {
     // Soruyu güncelle
     try {
-      const {
-        questionText,
-        correctAnswer,
-        options,
-        explanation,
-        difficulty,
-        subject,
-      } = req.body;
+      // Resimdeki modele göre sadece text ve correct alanları
+      const text = req.body.text;
+      const correct = req.body.correct;
 
-      if (!questionText || !questionText.trim()) {
+      if (!text || !text.trim()) {
         return res.status(400).json({
           success: false,
           error: "Soru metni gereklidir",
+        });
+      }
+
+      if (!correct || (correct !== "Doğru" && correct !== "Yanlış")) {
+        return res.status(400).json({
+          success: false,
+          error: "Doğru cevap 'Doğru' veya 'Yanlış' olmalıdır",
         });
       }
 
@@ -66,15 +68,10 @@ export default async function handler(
         });
       }
 
-      // Güncellenmiş soru verisini oluştur
+      // Güncellenmiş soru verisini oluştur - resimdeki modele göre sadece text ve correct
       const updatedSoruData = {
-        questionText: questionText.trim(),
-        correctAnswer: correctAnswer || "Doğru",
-        options: options || ["Doğru", "Yanlış"],
-        explanation: explanation?.trim() || "",
-        difficulty: difficulty || "orta",
-        subject: subject || "Doğru-Yanlış",
-        updatedAt: new Date(),
+        text: text.trim(),
+        correct: correct,
       };
 
       // Soruyu güncelle

@@ -172,6 +172,60 @@ export default function AdminHome() {
                   <div className="card h-100 shadow-sm admin-card d-flex flex-column">
                     <div className="card-body text-center p-4 d-flex flex-column h-100">
                       <div className="admin-icon mb-3">
+                        <i className="bi bi-calendar-week"></i>
+                      </div>
+                      <h5 className="card-title fw-bold">Ders Programları</h5>
+                      <p className="card-text text-muted">
+                        KPSS çalışma programlarını oluşturun, günleri düzenleyin
+                        ve içerikleri güncel tutun.
+                      </p>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/study-programs"
+                          className="btn w-100"
+                          style={{
+                            backgroundColor: "black",
+                            color: "#fff",
+                          }}
+                        >
+                          Programları Yönet
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-md-3">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
+                      <div className="admin-icon mb-3">
+                        <i className="bi bi-crosshair"></i>
+                      </div>
+                      <h5 className="card-title fw-bold">Düello Yönetimi</h5>
+                      <p className="card-text text-muted">
+                        Düello sorularını düzenleyin, seçenekleri yönetin ve
+                        kullanıcıların karşılaşacağı soruları güncel tutun.
+                      </p>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/duello-questions"
+                          className="btn w-100"
+                          style={{
+                            backgroundColor: "black",
+                            color: "#fff",
+                          }}
+                        >
+                          Düelloları Yönet
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-md-3">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
+                      <div className="admin-icon mb-3">
                         <i className="bi bi-bug"></i>
                       </div>
                       <h5 className="card-title fw-bold">Problem Raporları</h5>
@@ -219,58 +273,6 @@ export default function AdminHome() {
                     </div>
                   </div>
                 </div> */}
-              </div>
-
-              {/* Quick Stats */}
-              <div className="row mt-5">
-                <div className="col-12">
-                  <div className="card shadow-sm">
-                    <div className="card-body">
-                      <h5 className="card-title text-center mb-4">
-                        <i className="bi bi-graph-up me-2"></i>
-                        Sistem Durumu
-                      </h5>
-                      <div className="row text-center">
-                        <div className="col-md-3">
-                          <div className="stat-item">
-                            <i className="bi bi-box text-primary"></i>
-                            <h6 className="mt-2">Aktif Planlar</h6>
-                            <p className="text-muted small">
-                              Sistemde aktif plan sayısı
-                            </p>
-                          </div>
-                        </div>
-                        <div className="col-md-3">
-                          <div className="stat-item">
-                            <i className="bi bi-people text-success"></i>
-                            <h6 className="mt-2">Premium Kullanıcılar</h6>
-                            <p className="text-muted small">
-                              Aktif premium üye sayısı
-                            </p>
-                          </div>
-                        </div>
-                        <div className="col-md-3">
-                          <div className="stat-item">
-                            <i className="bi bi-receipt text-warning"></i>
-                            <h6 className="mt-2">Toplam Sipariş</h6>
-                            <p className="text-muted small">
-                              Bugüne kadar alınan sipariş
-                            </p>
-                          </div>
-                        </div>
-                        <div className="col-md-3">
-                          <div className="stat-item">
-                            <i className="bi bi-currency-dollar text-info"></i>
-                            <h6 className="mt-2">Toplam Gelir</h6>
-                            <p className="text-muted small">
-                              Sistemden elde edilen gelir
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
