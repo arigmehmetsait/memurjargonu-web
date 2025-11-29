@@ -114,30 +114,40 @@ export default function AdminEslestirmeEditPage() {
 
   const startEditing = (fieldPath: string, currentValue: any) => {
     // Eğer level içinde bir soru düzenleniyorsa ve questionType varsa, özel modal aç
-    if (fieldPath.includes("level") && currentValue && typeof currentValue === "object") {
+    if (
+      fieldPath.includes("level") &&
+      currentValue &&
+      typeof currentValue === "object"
+    ) {
       const qType = currentValue.questionType;
       if (qType && [1, 2, 3].includes(qType)) {
         openQuestionModal(qType, currentValue, fieldPath);
         return;
       }
     }
-    
+
     // Normal JSON düzenleme
     setEditingField(fieldPath);
     setFieldValue(JSON.stringify(currentValue, null, 2));
     setShowEditModal(true);
   };
 
-  const openQuestionModal = (type: QuestionType, data: any = null, fieldPath: string = "") => {
+  const openQuestionModal = (
+    type: QuestionType,
+    data: any = null,
+    fieldPath: string = ""
+  ) => {
     setQuestionType(type);
     setEditingField(fieldPath);
-    
+
     if (data) {
       // Mevcut veriyi düzenle
       setQuestionFormData({
         questionText: data.soru?.question || data.question || "",
         correctAnswer: data.soru?.correct || data.correctAnswer || "",
-        options: data.soru?.options || data.soru?.correct || data.options || ["", "", "", ""],
+        options: data.soru?.options ||
+          data.soru?.correct ||
+          data.options || ["", "", "", ""],
         incorrectOptions: data.soru?.incorrect || ["", ""],
         explanation: data.aciklama || data.explanation || "",
         difficulty: data.zorluk || data.difficulty || "orta",
@@ -157,7 +167,7 @@ export default function AdminEslestirmeEditPage() {
         levelGroup: "level2",
       });
     }
-    
+
     setShowQuestionModal(true);
   };
 
@@ -259,7 +269,7 @@ export default function AdminEslestirmeEditPage() {
   const saveQuestionField = async () => {
     // Yeni soru ekleme kontrolü
     const isNewQuestion = !editingField;
-    
+
     if (isNewQuestion) {
       if (!questionFormData.levelGroup?.trim()) {
         toast.warn("Level grubu zorunludur (örn: level2)");
@@ -281,12 +291,18 @@ export default function AdminEslestirmeEditPage() {
       .map((opt) => opt.trim())
       .filter(Boolean);
 
-    if (questionType === QuestionType.COKTAN_SECMELI && validOptions.length < 2) {
+    if (
+      questionType === QuestionType.COKTAN_SECMELI &&
+      validOptions.length < 2
+    ) {
       toast.warn("Çoktan seçmeli sorular için en az 2 seçenek gereklidir");
       return;
     }
 
-    if (questionType === QuestionType.BOSLUK_DOLDURMA && validOptions.length < 2) {
+    if (
+      questionType === QuestionType.BOSLUK_DOLDURMA &&
+      validOptions.length < 2
+    ) {
       toast.warn("Boşluk doldurma için en az 2 seçenek gereklidir");
       return;
     }
@@ -295,7 +311,7 @@ export default function AdminEslestirmeEditPage() {
       setSaving(true);
 
       // Soru tipine göre veri formatla
-      let questionData: any = {
+      const questionData: any = {
         questionType: questionType,
       };
 
@@ -322,7 +338,7 @@ export default function AdminEslestirmeEditPage() {
         const validIncorrectOptions = questionFormData.incorrectOptions
           .map((opt) => opt.trim())
           .filter(Boolean);
-        
+
         questionData.soru = {
           question: questionFormData.questionText.trim(),
           correct: validOptions,
@@ -334,10 +350,10 @@ export default function AdminEslestirmeEditPage() {
       }
 
       const idToken = await getValidToken();
-      
+
       // Yeni soru için fieldPath oluştur
-      const finalFieldPath = isNewQuestion 
-        ? `${questionFormData.levelGroup}.${questionFormData.levelNumber}` 
+      const finalFieldPath = isNewQuestion
+        ? `${questionFormData.levelGroup}.${questionFormData.levelNumber}`
         : editingField;
 
       const response = await fetch(
@@ -360,7 +376,11 @@ export default function AdminEslestirmeEditPage() {
       if (data.success) {
         cancelQuestionModal();
         await fetchDocument();
-        toast.success(isNewQuestion ? "Soru başarıyla eklendi!" : "Soru başarıyla güncellendi!");
+        toast.success(
+          isNewQuestion
+            ? "Soru başarıyla eklendi!"
+            : "Soru başarıyla güncellendi!"
+        );
       } else {
         toast.error(data.error || "Soru kaydedilemedi");
       }
@@ -522,12 +542,13 @@ export default function AdminEslestirmeEditPage() {
 
     if (typeof value === "object" && !Array.isArray(value)) {
       // Soru kontrolü
-      const isQuestion = value.questionType || (value.soru && value.soru.question);
-      
+      const isQuestion =
+        value.questionType || (value.soru && value.soru.question);
+
       if (isQuestion) {
         let qTypeLabel = "Soru";
         let qTypeColor = "primary";
-        
+
         if (value.questionType === QuestionType.BOSLUK_DOLDURMA) {
           qTypeLabel = "Boşluk Doldurma";
           qTypeColor = "success";
@@ -539,8 +560,12 @@ export default function AdminEslestirmeEditPage() {
           qTypeColor = "info";
         }
 
-        const questionText = value.soru?.question || value.question || "Soru metni yok";
-        const shortQuestion = questionText.length > 100 ? questionText.substring(0, 100) + "..." : questionText;
+        const questionText =
+          value.soru?.question || value.question || "Soru metni yok";
+        const shortQuestion =
+          questionText.length > 100
+            ? questionText.substring(0, 100) + "..."
+            : questionText;
 
         return (
           <div key={key} className="mb-3">
@@ -594,7 +619,6 @@ export default function AdminEslestirmeEditPage() {
       }
 
       const keys = Object.keys(value);
-      
 
       return (
         <div key={key} className="mb-3">
@@ -614,7 +638,6 @@ export default function AdminEslestirmeEditPage() {
                 </button>
                 <strong className="text-primary fs-6">{key}</strong>
                 <span className="badge bg-secondary">{keys.length} alan</span>
-               
               </div>
               <div className="d-flex gap-2">
                 <button
@@ -782,12 +805,12 @@ export default function AdminEslestirmeEditPage() {
   }
 
   const fields = Object.keys(document).filter((key) => key !== "id");
-  
+
   // Level'ları order alanına göre sırala
   const sortedFields = fields.sort((a, b) => {
     const valA = document[a];
     const valB = document[b];
-    
+
     // Level ile başlayan alanları order'a göre sırala
     if (a.startsWith("level") && b.startsWith("level")) {
       const orderA = valA?.order || parseInt(a.replace(/\D/g, "")) || 0;
@@ -803,7 +826,7 @@ export default function AdminEslestirmeEditPage() {
     if (!a.startsWith("level") && b.startsWith("level")) return 1;
     return a.localeCompare(b);
   });
-  
+
   const filteredFields = sortedFields.filter((key) => {
     if (!searchTerm) return true;
     return key.toLowerCase().includes(searchTerm.toLowerCase());
@@ -878,7 +901,7 @@ export default function AdminEslestirmeEditPage() {
                         <i className="bi bi-arrow-clockwise me-1"></i>
                         Yenile
                       </button>
-                      
+
                       {/* Soru Ekleme Butonları */}
                       <div className="ms-auto d-flex gap-2">
                         <button
@@ -892,7 +915,9 @@ export default function AdminEslestirmeEditPage() {
                         <div className="vr mx-1"></div>
                         <button
                           className="btn btn-success btn-sm"
-                          onClick={() => openQuestionModal(QuestionType.BOSLUK_DOLDURMA)}
+                          onClick={() =>
+                            openQuestionModal(QuestionType.BOSLUK_DOLDURMA)
+                          }
                           title="Boşluk Doldurma Sorusu Ekle"
                         >
                           <i className="bi bi-plus-circle me-1"></i>
@@ -900,7 +925,9 @@ export default function AdminEslestirmeEditPage() {
                         </button>
                         <button
                           className="btn btn-success btn-sm"
-                          onClick={() => openQuestionModal(QuestionType.COKTAN_SECMELI)}
+                          onClick={() =>
+                            openQuestionModal(QuestionType.COKTAN_SECMELI)
+                          }
                           title="Çoktan Seçmeli Soru Ekle"
                         >
                           <i className="bi bi-plus-circle me-1"></i>
@@ -908,7 +935,9 @@ export default function AdminEslestirmeEditPage() {
                         </button>
                         <button
                           className="btn btn-success btn-sm"
-                          onClick={() => openQuestionModal(QuestionType.ESLESTIRME)}
+                          onClick={() =>
+                            openQuestionModal(QuestionType.ESLESTIRME)
+                          }
                           title="Eşleştirme Sorusu Ekle"
                         >
                           <i className="bi bi-plus-circle me-1"></i>
@@ -1095,12 +1124,17 @@ export default function AdminEslestirmeEditPage() {
                               key.startsWith("level") ||
                               (typeof val === "object" &&
                                 val !== null &&
-                                (val.title || val.level || Array.isArray(val.sorular)))
+                                (val.title ||
+                                  val.level ||
+                                  Array.isArray(val.sorular)))
                             );
                           })
                           .map((level) => (
                             <option key={level} value={level}>
-                              {level} {document[level]?.title ? `(${document[level].title})` : ""}
+                              {level}{" "}
+                              {document[level]?.title
+                                ? `(${document[level].title})`
+                                : ""}
                             </option>
                           ))}
                       </select>
@@ -1125,12 +1159,17 @@ export default function AdminEslestirmeEditPage() {
                     </div>
                     <div className="col-12 mt-2">
                       <small className="form-text text-muted">
-                        Soru <code>{questionFormData.levelGroup || "..."}.{questionFormData.levelNumber || "..."}</code> olarak kaydedilecektir
+                        Soru{" "}
+                        <code>
+                          {questionFormData.levelGroup || "..."}.
+                          {questionFormData.levelNumber || "..."}
+                        </code>{" "}
+                        olarak kaydedilecektir
                       </small>
                     </div>
                   </div>
                 )}
-                
+
                 {/* Soru Metni */}
                 <div className="mb-3">
                   <label htmlFor="questionText" className="form-label">
@@ -1184,9 +1223,10 @@ export default function AdminEslestirmeEditPage() {
                             type="button"
                             className="btn btn-outline-danger"
                             onClick={() => {
-                              const newOptions = questionFormData.options.filter(
-                                (_, i) => i !== idx
-                              );
+                              const newOptions =
+                                questionFormData.options.filter(
+                                  (_, i) => i !== idx
+                                );
                               setQuestionFormData((prev) => ({
                                 ...prev,
                                 options: newOptions,
@@ -1219,8 +1259,7 @@ export default function AdminEslestirmeEditPage() {
                 {questionType === QuestionType.ESLESTIRME && (
                   <div className="mb-3">
                     <label className="form-label">
-                      Doğru Eşleştirmeler{" "}
-                      <span className="text-danger">*</span>
+                      Doğru Eşleştirmeler <span className="text-danger">*</span>
                     </label>
                     <small className="form-text text-muted d-block mb-2">
                       Her satıra bir eşleştirme girin
@@ -1247,9 +1286,10 @@ export default function AdminEslestirmeEditPage() {
                             type="button"
                             className="btn btn-outline-danger"
                             onClick={() => {
-                              const newOptions = questionFormData.options.filter(
-                                (_, i) => i !== idx
-                              );
+                              const newOptions =
+                                questionFormData.options.filter(
+                                  (_, i) => i !== idx
+                                );
                               setQuestionFormData((prev) => ({
                                 ...prev,
                                 options: newOptions,
@@ -1285,7 +1325,8 @@ export default function AdminEslestirmeEditPage() {
                       Yanlış Eşleştirmeler (Opsiyonel)
                     </label>
                     <small className="form-text text-muted d-block mb-2">
-                      Kullanıcıyı şaşırtmak için yanlış seçenekler ekleyebilirsiniz
+                      Kullanıcıyı şaşırtmak için yanlış seçenekler
+                      ekleyebilirsiniz
                     </small>
                     {questionFormData.incorrectOptions.map((option, idx) => (
                       <div key={idx} className="input-group mb-2">
@@ -1297,7 +1338,9 @@ export default function AdminEslestirmeEditPage() {
                           className="form-control"
                           value={option}
                           onChange={(e) => {
-                            const newOptions = [...questionFormData.incorrectOptions];
+                            const newOptions = [
+                              ...questionFormData.incorrectOptions,
+                            ];
                             newOptions[idx] = e.target.value;
                             setQuestionFormData((prev) => ({
                               ...prev,
@@ -1310,9 +1353,10 @@ export default function AdminEslestirmeEditPage() {
                           type="button"
                           className="btn btn-outline-danger"
                           onClick={() => {
-                            const newOptions = questionFormData.incorrectOptions.filter(
-                              (_, i) => i !== idx
-                            );
+                            const newOptions =
+                              questionFormData.incorrectOptions.filter(
+                                (_, i) => i !== idx
+                              );
                             setQuestionFormData((prev) => ({
                               ...prev,
                               incorrectOptions: newOptions,
@@ -1539,7 +1583,7 @@ export default function AdminEslestirmeEditPage() {
           </div>
         </div>
       )}
-      
+
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div
