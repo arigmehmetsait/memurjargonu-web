@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { DenemeType } from "@/types/deneme";
+import { toast } from "react-toastify";
 
 interface CreateDenemeModalProps {
   isOpen: boolean;
@@ -55,7 +56,7 @@ export default function CreateDenemeModal({
     e.preventDefault();
 
     if (!denemeName.trim()) {
-      alert("Deneme adı gereklidir");
+      toast.warn("Deneme adı gereklidir");
       return;
     }
 
@@ -81,13 +82,13 @@ export default function CreateDenemeModal({
         setDenemeDescription("");
         onClose();
         onSuccess();
-        alert("Deneme başarıyla oluşturuldu!");
+        toast.success("Deneme başarıyla oluşturuldu!");
       } else {
-        alert("Hata: " + data.error);
+        toast.error(data.error || "Deneme oluşturulamadı");
       }
     } catch (err) {
       console.error("Deneme oluşturma hatası:", err);
-      alert("Deneme oluşturulurken bir hata oluştu");
+      toast.error("Deneme oluşturulurken bir hata oluştu");
     } finally {
       setCreating(false);
     }

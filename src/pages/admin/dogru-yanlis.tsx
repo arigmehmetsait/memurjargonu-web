@@ -6,11 +6,18 @@ import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { toast } from "react-toastify";
 
+interface DogruYanlisCollection {
+  id: string;
+  name: string;
+  soruSayisi: number;
+}
+
 interface DogruYanlisDeneme {
   id: string;
   name: string;
   description: string;
   soruSayisi: number;
+  collections?: DogruYanlisCollection[];
   createdAt?: Date;
   updatedAt?: Date;
   status?: string;
@@ -36,6 +43,22 @@ export default function AdminDogruYanlisPage() {
   const [denemeToDelete, setDenemeToDelete] =
     useState<DogruYanlisDeneme | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showCollectionsModal, setShowCollectionsModal] = useState(false);
+  const [selectedDenemeForCollections, setSelectedDenemeForCollections] =
+    useState<DogruYanlisDeneme | null>(null);
+  const [showAddCollectionModal, setShowAddCollectionModal] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [creatingCollection, setCreatingCollection] = useState(false);
+  const [showEditCollectionModal, setShowEditCollectionModal] = useState(false);
+  const [collectionToEdit, setCollectionToEdit] =
+    useState<DogruYanlisCollection | null>(null);
+  const [editCollectionName, setEditCollectionName] = useState("");
+  const [updatingCollection, setUpdatingCollection] = useState(false);
+  const [showDeleteCollectionModal, setShowDeleteCollectionModal] =
+    useState(false);
+  const [collectionToDelete, setCollectionToDelete] =
+    useState<DogruYanlisCollection | null>(null);
+  const [deletingCollection, setDeletingCollection] = useState(false);
 
   useEffect(() => {
     fetchDenemeler();
@@ -51,10 +74,12 @@ export default function AdminDogruYanlisPage() {
 
       if (data.success) {
         setDenemeler(data.data);
+        return data.data; // Güncellenmiş veriyi döndür
       } else {
         const errorMsg = data.error || "Doğru-Yanlış denemeleri yüklenemedi";
         const details = data.details ? ` (${data.details})` : "";
         setError(errorMsg + details);
+        return null;
       }
     } catch (err) {
       console.error("Doğru-Yanlış denemeleri yüklenirken hata:", err);
@@ -62,6 +87,7 @@ export default function AdminDogruYanlisPage() {
         "Doğru-Yanlış denemeleri yüklenirken bir hata oluştu: " +
           (err instanceof Error ? err.message : "Bilinmeyen hata")
       );
+      return null;
     } finally {
       setLoading(false);
     }
@@ -117,6 +143,178 @@ export default function AdminDogruYanlisPage() {
     setEditDenemeName(deneme.name);
     setEditDenemeDescription(deneme.description || "");
     setShowEditModal(true);
+  };
+
+  const handleSoruYonetimiClick = (deneme: DogruYanlisDeneme) => {
+    setSelectedDenemeForCollections(deneme);
+    setShowCollectionsModal(true);
+  };
+
+  const handleAddCollection = async () => {
+    if (!selectedDenemeForCollections || !newCollectionName.trim()) {
+      toast.warn("Koleksiyon adı gereklidir");
+      return;
+    }
+
+    try {
+      setCreatingCollection(true);
+
+      const response = await fetch(
+        `/api/admin/dogru-yanlis/${encodeURIComponent(
+          selectedDenemeForCollections.id
+        )}/collections`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            collectionName: newCollectionName.trim(),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setShowAddCollectionModal(false);
+        setNewCollectionName("");
+        // Denemeleri yeniden yükle ve güncellenmiş veriyi al
+        const updatedDenemeler = await fetchDenemeler();
+        // Seçili denemeyi güncelle
+        if (updatedDenemeler && selectedDenemeForCollections) {
+          const updatedDeneme = updatedDenemeler.find(
+            (d: DogruYanlisDeneme) => d.id === selectedDenemeForCollections.id
+          );
+          if (updatedDeneme) {
+            setSelectedDenemeForCollections(updatedDeneme);
+          }
+        }
+        toast.success("Koleksiyon başarıyla oluşturuldu!");
+      } else {
+        toast.error(data.error || "Koleksiyon oluşturulamadı");
+      }
+    } catch (err) {
+      console.error("Koleksiyon oluşturma hatası:", err);
+      toast.error("Koleksiyon oluşturulurken bir hata oluştu");
+    } finally {
+      setCreatingCollection(false);
+    }
+  };
+
+  const handleEditCollectionClick = (collection: DogruYanlisCollection) => {
+    setCollectionToEdit(collection);
+    setEditCollectionName(collection.name);
+    setShowEditCollectionModal(true);
+  };
+
+  const handleUpdateCollection = async () => {
+    if (!selectedDenemeForCollections || !collectionToEdit) return;
+
+    if (!editCollectionName.trim()) {
+      toast.warn("Koleksiyon adı gereklidir");
+      return;
+    }
+
+    if (editCollectionName.trim() === collectionToEdit.name) {
+      toast.warn("Yeni ad eski adla aynı olamaz");
+      return;
+    }
+
+    try {
+      setUpdatingCollection(true);
+
+      const response = await fetch(
+        `/api/admin/dogru-yanlis/${encodeURIComponent(
+          selectedDenemeForCollections.id
+        )}/collections/${encodeURIComponent(collectionToEdit.id)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            newCollectionName: editCollectionName.trim(),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success("Koleksiyon başarıyla güncellendi");
+        setShowEditCollectionModal(false);
+        setCollectionToEdit(null);
+        // Denemeleri yeniden yükle ve güncellenmiş veriyi al
+        const updatedDenemeler = await fetchDenemeler();
+        // Seçili denemeyi güncelle
+        if (updatedDenemeler && selectedDenemeForCollections) {
+          const updatedDeneme = updatedDenemeler.find(
+            (d: DogruYanlisDeneme) => d.id === selectedDenemeForCollections.id
+          );
+          if (updatedDeneme) {
+            setSelectedDenemeForCollections(updatedDeneme);
+          }
+        }
+      } else {
+        toast.error(data.error || "Koleksiyon güncellenemedi");
+      }
+    } catch (err) {
+      console.error("Koleksiyon güncelleme hatası:", err);
+      toast.error("Koleksiyon güncellenirken bir hata oluştu");
+    } finally {
+      setUpdatingCollection(false);
+    }
+  };
+
+  const handleDeleteCollectionClick = (collection: DogruYanlisCollection) => {
+    setCollectionToDelete(collection);
+    setShowDeleteCollectionModal(true);
+  };
+
+  const handleDeleteCollectionConfirm = async () => {
+    if (!selectedDenemeForCollections || !collectionToDelete) return;
+
+    try {
+      setDeletingCollection(true);
+
+      const response = await fetch(
+        `/api/admin/dogru-yanlis/${encodeURIComponent(
+          selectedDenemeForCollections.id
+        )}/collections/${encodeURIComponent(collectionToDelete.id)}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setShowDeleteCollectionModal(false);
+        setCollectionToDelete(null);
+        // Denemeleri yeniden yükle ve güncellenmiş veriyi al
+        const updatedDenemeler = await fetchDenemeler();
+        // Seçili denemeyi güncelle
+        if (updatedDenemeler && selectedDenemeForCollections) {
+          const updatedDeneme = updatedDenemeler.find(
+            (d: DogruYanlisDeneme) => d.id === selectedDenemeForCollections.id
+          );
+          if (updatedDeneme) {
+            setSelectedDenemeForCollections(updatedDeneme);
+          }
+        }
+        toast.success(
+          `"${collectionToDelete.name}" koleksiyonu silindi. ${data.data.deletedQuestionsCount} soru da silindi.`
+        );
+      } else {
+        toast.error(data.error || "Koleksiyon silinemedi");
+      }
+    } catch (err) {
+      console.error("Koleksiyon silme hatası:", err);
+      toast.error("Koleksiyon silinirken bir hata oluştu");
+    } finally {
+      setDeletingCollection(false);
+    }
   };
 
   const handleUpdateDeneme = async () => {
@@ -267,7 +465,7 @@ export default function AdminDogruYanlisPage() {
                   <thead className="table-dark">
                     <tr>
                       <th>Deneme Adı</th>
-                      <th>Soru Sayısı</th>
+                      <th>Toplam Soru</th>
                       <th>ID</th>
                       <th>İşlemler</th>
                     </tr>
@@ -303,41 +501,13 @@ export default function AdminDogruYanlisPage() {
                         </td>
                         <td>
                           <div className="btn-group" role="group">
-                            {/* <button
+                            <button
                               className="btn btn-outline-primary btn-sm"
-                              title="Denemeyi Görüntüle (Kullanıcı Görünümü)"
-                              onClick={() => {
-                                window.open(
-                                  `/dogru-yanlis/${encodeURIComponent(
-                                    deneme.id
-                                  )}`,
-                                  "_blank"
-                                );
-                              }}
+                              title="Soru Yönetimi"
+                              onClick={() => handleSoruYonetimiClick(deneme)}
                             >
-                              <i className="bi bi-eye"></i>
-                            </button>
-                            <button
-                              className="btn btn-outline-info btn-sm"
-                              title="İçerikler Sayfasında Görüntüle"
-                              onClick={() => {
-                                window.open("/icerikler", "_blank");
-                              }}
-                            >
-                              <i className="bi bi-collection"></i>
-                            </button> */}
-                            <button
-                              className="btn btn-outline-success btn-sm"
-                              title="Soruları Yönet (Admin Görünümü)"
-                              onClick={() => {
-                                router.push(
-                                  `/admin/dogru-yanlis/${encodeURIComponent(
-                                    deneme.id
-                                  )}/sorular`
-                                );
-                              }}
-                            >
-                              <i className="bi bi-list-ul"></i>
+                              <i className="bi bi-list-ul me-1"></i>
+                              Soru Yönetimi
                             </button>
                             <button
                               className="btn btn-outline-warning btn-sm"
@@ -667,6 +837,426 @@ export default function AdminDogruYanlisPage() {
           </div>
         </div>
       )}
+
+      {/* Alt Koleksiyonlar Modal */}
+      {showCollectionsModal && selectedDenemeForCollections && (
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title">
+                  <i className="bi bi-folder2-open me-2"></i>
+                  Soru Yönetimi - {selectedDenemeForCollections.name}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => {
+                    setShowCollectionsModal(false);
+                    setSelectedDenemeForCollections(null);
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                {selectedDenemeForCollections.collections &&
+                selectedDenemeForCollections.collections.length > 0 ? (
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                      <p className="text-muted mb-0">
+                        Lütfen yönetmek istediğiniz alt koleksiyonu seçin:
+                      </p>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => {
+                          setNewCollectionName("");
+                          setShowAddCollectionModal(true);
+                        }}
+                      >
+                        <i className="bi bi-plus-circle me-1"></i>
+                        Yeni Koleksiyon Ekle
+                      </button>
+                    </div>
+                    <div className="row g-3">
+                      {selectedDenemeForCollections.collections.map((col) => (
+                        <div key={col.id} className="col-md-6">
+                          <div className="card h-100 border-primary">
+                            <div className="card-body">
+                              <div className="d-flex align-items-center justify-content-between">
+                                <div className="d-flex align-items-center">
+                                  <div
+                                    className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3"
+                                    style={{ width: "50px", height: "50px" }}
+                                  >
+                                    <i className="bi bi-folder2-open fs-5"></i>
+                                  </div>
+                                  <div>
+                                    <h6 className="card-title mb-1">
+                                      {col.name}
+                                    </h6>
+                                    <small className="text-muted">
+                                      Alt Koleksiyon
+                                    </small>
+                                  </div>
+                                </div>
+                                <div className="text-end">
+                                  <span className="badge bg-primary fs-6">
+                                    {col.soruSayisi}
+                                  </span>
+                                  <br />
+                                  <small className="text-muted">
+                                    {col.soruSayisi === 1 ? "Soru" : "Soru"}
+                                  </small>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="card-footer bg-light">
+                              <div className="d-flex gap-2 justify-content-between">
+                                <button
+                                  className="btn btn-outline-primary btn-sm flex-fill"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push(
+                                      `/admin/dogru-yanlis/${encodeURIComponent(
+                                        selectedDenemeForCollections.id
+                                      )}/sorular?collection=${encodeURIComponent(
+                                        col.id
+                                      )}`
+                                    );
+                                  }}
+                                >
+                                  <i className="bi bi-arrow-right-circle me-1"></i>
+                                  Soruları Görüntüle
+                                </button>
+                                <button
+                                  className="btn btn-outline-warning btn-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditCollectionClick(col);
+                                  }}
+                                  title="Düzenle"
+                                >
+                                  <i className="bi bi-pencil"></i>
+                                </button>
+                                <button
+                                  className="btn btn-outline-danger btn-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteCollectionClick(col);
+                                  }}
+                                  title="Sil"
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-5">
+                    <i className="bi bi-folder-x display-1 text-muted"></i>
+                    <h5 className="mt-3 text-muted">
+                      Alt Koleksiyon Bulunamadı
+                    </h5>
+                    <p className="text-muted">
+                      Bu denemede henüz alt koleksiyon oluşturulmamış.
+                    </p>
+                    <button
+                      className="btn btn-primary mt-3"
+                      onClick={() => {
+                        setNewCollectionName("");
+                        setShowAddCollectionModal(true);
+                      }}
+                    >
+                      <i className="bi bi-plus-circle me-2"></i>
+                      İlk Koleksiyonu Oluştur
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setNewCollectionName("");
+                    setShowAddCollectionModal(true);
+                  }}
+                >
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Yeni Koleksiyon Ekle
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowCollectionsModal(false);
+                    setSelectedDenemeForCollections(null);
+                  }}
+                >
+                  <i className="bi bi-x-circle me-2"></i>
+                  Kapat
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Yeni Koleksiyon Ekleme Modal */}
+      {showAddCollectionModal && selectedDenemeForCollections && (
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title">
+                  <i className="bi bi-plus-circle me-2"></i>
+                  Yeni Koleksiyon Oluştur
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowAddCollectionModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label htmlFor="collectionName" className="form-label">
+                    Koleksiyon Adı <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="collectionName"
+                    value={newCollectionName}
+                    onChange={(e) => setNewCollectionName(e.target.value)}
+                    placeholder="Örn: sorular, test, deneme1"
+                    disabled={creatingCollection}
+                  />
+                  <div className="form-text">
+                    Bu koleksiyon "{selectedDenemeForCollections.name}" denemesi
+                    altında oluşturulacak.
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowAddCollectionModal(false)}
+                  disabled={creatingCollection}
+                >
+                  İptal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleAddCollection}
+                  disabled={creatingCollection || !newCollectionName.trim()}
+                >
+                  {creatingCollection ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                      ></span>
+                      Oluşturuluyor...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check-circle me-2"></i>
+                      Oluştur
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Koleksiyon Düzenleme Modal */}
+      {showEditCollectionModal &&
+        collectionToEdit &&
+        selectedDenemeForCollections && (
+          <div
+            className="modal show d-block"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div className="modal-dialog">
+              <div className="modal-content">
+                <div className="modal-header bg-warning">
+                  <h5 className="modal-title text-dark">
+                    <i className="bi bi-pencil me-2"></i>
+                    Koleksiyonu Düzenle
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => {
+                      if (updatingCollection) return;
+                      setShowEditCollectionModal(false);
+                      setCollectionToEdit(null);
+                    }}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <div className="mb-3">
+                    <label htmlFor="editCollectionName" className="form-label">
+                      Koleksiyon Adı <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="editCollectionName"
+                      className="form-control"
+                      value={editCollectionName}
+                      onChange={(e) => setEditCollectionName(e.target.value)}
+                      disabled={updatingCollection}
+                      placeholder="Koleksiyon adını güncelleyin"
+                    />
+                    <div className="alert alert-warning mt-2" role="alert">
+                      <i className="bi bi-exclamation-triangle me-2"></i>
+                      <strong>Dikkat!</strong> Koleksiyon adı değiştirildiğinde
+                      tüm sorular yeni koleksiyona taşınacak.
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      if (updatingCollection) return;
+                      setShowEditCollectionModal(false);
+                      setCollectionToEdit(null);
+                    }}
+                    disabled={updatingCollection}
+                  >
+                    İptal
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-warning"
+                    onClick={handleUpdateCollection}
+                    disabled={
+                      updatingCollection ||
+                      !editCollectionName.trim() ||
+                      editCollectionName.trim() === collectionToEdit.name
+                    }
+                  >
+                    {updatingCollection ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                        ></span>
+                        Güncelleniyor...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-check-circle me-2"></i>
+                        Güncelle
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      {/* Koleksiyon Silme Onay Modalı */}
+      {showDeleteCollectionModal &&
+        collectionToDelete &&
+        selectedDenemeForCollections && (
+          <div
+            className="modal show d-block"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header bg-danger text-white">
+                  <h5 className="modal-title">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    Koleksiyon Silme Onayı
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => {
+                      setShowDeleteCollectionModal(false);
+                      setCollectionToDelete(null);
+                    }}
+                    disabled={deletingCollection}
+                  ></button>
+                </div>
+                <div className="modal-body">
+                  <div className="alert alert-danger" role="alert">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Dikkat!</strong> Bu işlem geri alınamaz.
+                  </div>
+                  <p className="text-dark">
+                    <strong>"{collectionToDelete.name}"</strong> koleksiyonunu
+                    silmek istediğinizden emin misiniz?
+                  </p>
+                  <div className="bg-light p-3 rounded text-dark">
+                    <h6>Silinecek İçerik:</h6>
+                    <ul className="mb-0">
+                      <li>Koleksiyon dokümanı</li>
+                      <li>
+                        Tüm sorular ({collectionToDelete.soruSayisi} soru)
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowDeleteCollectionModal(false);
+                      setCollectionToDelete(null);
+                    }}
+                    disabled={deletingCollection}
+                  >
+                    <i className="bi bi-x-circle me-2"></i>
+                    İptal
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    onClick={handleDeleteCollectionConfirm}
+                    disabled={deletingCollection}
+                  >
+                    {deletingCollection ? (
+                      <>
+                        <span
+                          className="spinner-border spinner-border-sm me-2"
+                          role="status"
+                          aria-hidden="true"
+                        ></span>
+                        Siliniyor...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-trash me-2"></i>
+                        Evet, Sil
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
     </AdminGuard>
   );
 }

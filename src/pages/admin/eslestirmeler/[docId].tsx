@@ -12,6 +12,24 @@ interface FieldValue {
   [key: string]: any;
 }
 
+// Soru tipleri
+enum QuestionType {
+  BOSLUK_DOLDURMA = 1,
+  COKTAN_SECMELI = 2,
+  ESLESTIRME = 3,
+}
+
+interface QuestionFormData {
+  questionText: string;
+  correctAnswer: string;
+  options: string[];
+  incorrectOptions: string[]; // Eşleştirme için yanlış seçenekler
+  explanation?: string;
+  difficulty?: string;
+  levelNumber?: string; // Yeni soru eklerken level numarası
+  levelGroup?: string; // Yeni soru eklerken level grubu (örn: level2, level3)
+}
+
 export default function AdminEslestirmeEditPage() {
   const router = useRouter();
   const { docId } = router.query;
@@ -24,6 +42,23 @@ export default function AdminEslestirmeEditPage() {
   const [fieldValue, setFieldValue] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [showLevelModal, setShowLevelModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [fieldToDelete, setFieldToDelete] = useState<string | null>(null);
+  const [newLevelName, setNewLevelName] = useState("");
+  const [newLevelTitle, setNewLevelTitle] = useState("");
+  const [questionType, setQuestionType] = useState<QuestionType | null>(null);
+  const [questionFormData, setQuestionFormData] = useState<QuestionFormData>({
+    questionText: "",
+    correctAnswer: "",
+    options: ["", "", "", ""],
+    incorrectOptions: ["", ""],
+    explanation: "",
+    difficulty: "orta",
+    levelNumber: "",
+    levelGroup: "level2",
+  });
 
   useEffect(() => {
     if (docId && typeof docId === "string") {
@@ -78,15 +113,74 @@ export default function AdminEslestirmeEditPage() {
   };
 
   const startEditing = (fieldPath: string, currentValue: any) => {
+    // Eğer level içinde bir soru düzenleniyorsa ve questionType varsa, özel modal aç
+    if (fieldPath.includes("level") && currentValue && typeof currentValue === "object") {
+      const qType = currentValue.questionType;
+      if (qType && [1, 2, 3].includes(qType)) {
+        openQuestionModal(qType, currentValue, fieldPath);
+        return;
+      }
+    }
+    
+    // Normal JSON düzenleme
     setEditingField(fieldPath);
     setFieldValue(JSON.stringify(currentValue, null, 2));
     setShowEditModal(true);
+  };
+
+  const openQuestionModal = (type: QuestionType, data: any = null, fieldPath: string = "") => {
+    setQuestionType(type);
+    setEditingField(fieldPath);
+    
+    if (data) {
+      // Mevcut veriyi düzenle
+      setQuestionFormData({
+        questionText: data.soru?.question || data.question || "",
+        correctAnswer: data.soru?.correct || data.correctAnswer || "",
+        options: data.soru?.options || data.soru?.correct || data.options || ["", "", "", ""],
+        incorrectOptions: data.soru?.incorrect || ["", ""],
+        explanation: data.aciklama || data.explanation || "",
+        difficulty: data.zorluk || data.difficulty || "orta",
+        levelNumber: "", // Düzenlemede gerek yok
+        levelGroup: "level2",
+      });
+    } else {
+      // Yeni soru ekle
+      setQuestionFormData({
+        questionText: "",
+        correctAnswer: "",
+        options: ["", "", "", ""],
+        incorrectOptions: ["", ""],
+        explanation: "",
+        difficulty: "orta",
+        levelNumber: "",
+        levelGroup: "level2",
+      });
+    }
+    
+    setShowQuestionModal(true);
   };
 
   const cancelEditing = () => {
     setEditingField(null);
     setFieldValue("");
     setShowEditModal(false);
+  };
+
+  const cancelQuestionModal = () => {
+    setShowQuestionModal(false);
+    setQuestionType(null);
+    setEditingField(null);
+    setQuestionFormData({
+      questionText: "",
+      correctAnswer: "",
+      options: ["", "", "", ""],
+      incorrectOptions: ["", ""],
+      explanation: "",
+      difficulty: "orta",
+      levelNumber: "",
+      levelGroup: "level2",
+    });
   };
 
   const expandAll = () => {
@@ -162,6 +256,230 @@ export default function AdminEslestirmeEditPage() {
     }
   };
 
+  const saveQuestionField = async () => {
+    // Yeni soru ekleme kontrolü
+    const isNewQuestion = !editingField;
+    
+    if (isNewQuestion) {
+      if (!questionFormData.levelGroup?.trim()) {
+        toast.warn("Level grubu zorunludur (örn: level2)");
+        return;
+      }
+      if (!questionFormData.levelNumber?.trim()) {
+        toast.warn("Soru numarası zorunludur");
+        return;
+      }
+    }
+
+    // Validasyon
+    if (!questionFormData.questionText.trim()) {
+      toast.warn("Soru metni zorunludur");
+      return;
+    }
+
+    const validOptions = questionFormData.options
+      .map((opt) => opt.trim())
+      .filter(Boolean);
+
+    if (questionType === QuestionType.COKTAN_SECMELI && validOptions.length < 2) {
+      toast.warn("Çoktan seçmeli sorular için en az 2 seçenek gereklidir");
+      return;
+    }
+
+    if (questionType === QuestionType.BOSLUK_DOLDURMA && validOptions.length < 2) {
+      toast.warn("Boşluk doldurma için en az 2 seçenek gereklidir");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Soru tipine göre veri formatla
+      let questionData: any = {
+        questionType: questionType,
+      };
+
+      if (questionType === QuestionType.BOSLUK_DOLDURMA) {
+        questionData.soru = {
+          question: questionFormData.questionText.trim(),
+          options: validOptions,
+          correct: questionFormData.correctAnswer.trim(),
+        };
+        if (questionFormData.explanation) {
+          questionData.aciklama = questionFormData.explanation.trim();
+        }
+      } else if (questionType === QuestionType.COKTAN_SECMELI) {
+        questionData.soru = {
+          question: questionFormData.questionText.trim(),
+          options: validOptions,
+        };
+        questionData.correctAnswer = questionFormData.correctAnswer.trim();
+        if (questionFormData.explanation) {
+          questionData.aciklama = questionFormData.explanation.trim();
+        }
+      } else if (questionType === QuestionType.ESLESTIRME) {
+        // Eşleştirme için özel format
+        const validIncorrectOptions = questionFormData.incorrectOptions
+          .map((opt) => opt.trim())
+          .filter(Boolean);
+        
+        questionData.soru = {
+          question: questionFormData.questionText.trim(),
+          correct: validOptions,
+          incorrect: validIncorrectOptions,
+        };
+        if (questionFormData.explanation) {
+          questionData.aciklama = questionFormData.explanation.trim();
+        }
+      }
+
+      const idToken = await getValidToken();
+      
+      // Yeni soru için fieldPath oluştur
+      const finalFieldPath = isNewQuestion 
+        ? `${questionFormData.levelGroup}.${questionFormData.levelNumber}` 
+        : editingField;
+
+      const response = await fetch(
+        `/api/admin/eslestirmeler/${encodeURIComponent(docId as string)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            fieldPath: finalFieldPath,
+            value: questionData,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        cancelQuestionModal();
+        await fetchDocument();
+        toast.success(isNewQuestion ? "Soru başarıyla eklendi!" : "Soru başarıyla güncellendi!");
+      } else {
+        toast.error(data.error || "Soru kaydedilemedi");
+      }
+    } catch (err) {
+      console.error("Soru güncellenirken hata:", err);
+      toast.error("Soru güncellenirken bir hata oluştu");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveNewLevel = async () => {
+    if (!newLevelName.trim()) {
+      toast.warn("Level adı zorunludur");
+      return;
+    }
+
+    if (!newLevelTitle.trim()) {
+      toast.warn("Konu başlığı zorunludur");
+      return;
+    }
+
+    // Level adı validasyonu
+    const cleanLevelName = newLevelName.trim();
+
+    // Mevcut level kontrolü
+    if (document && document[cleanLevelName]) {
+      toast.warn("Bu isimde bir level zaten var");
+      return;
+    }
+
+    // Level numarasını isminden çıkarmaya çalış (örn: level5 -> 5)
+    const levelNum = parseInt(cleanLevelName.replace(/\D/g, "")) || 0;
+
+    try {
+      setSaving(true);
+      const idToken = await getValidToken();
+
+      const response = await fetch(
+        `/api/admin/eslestirmeler/${encodeURIComponent(docId as string)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            fieldPath: cleanLevelName,
+            value: {
+              title: newLevelTitle.trim(),
+              level: levelNum > 0 ? levelNum : undefined,
+            },
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        setShowLevelModal(false);
+        setNewLevelName("");
+        setNewLevelTitle("");
+        await fetchDocument();
+        toast.success("Level başarıyla oluşturuldu!");
+      } else {
+        toast.error(data.error || "Level oluşturulamadı");
+      }
+    } catch (err) {
+      console.error("Level oluşturulurken hata:", err);
+      toast.error("Level oluşturulurken bir hata oluştu");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteField = (fieldPath: string) => {
+    setFieldToDelete(fieldPath);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!fieldToDelete) return;
+
+    try {
+      setSaving(true);
+      const idToken = await getValidToken();
+
+      const response = await fetch(
+        `/api/admin/eslestirmeler/${encodeURIComponent(docId as string)}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            fieldPath: fieldToDelete,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        await fetchDocument();
+        toast.success("Alan başarıyla silindi!");
+        setShowDeleteModal(false);
+        setFieldToDelete(null);
+      } else {
+        toast.error(data.error || "Alan silinemedi");
+      }
+    } catch (err) {
+      console.error("Alan silinirken hata:", err);
+      toast.error("Alan silinirken bir hata oluştu");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const renderField = (
     key: string,
     value: any,
@@ -203,10 +521,80 @@ export default function AdminEslestirmeEditPage() {
     }
 
     if (typeof value === "object" && !Array.isArray(value)) {
+      // Soru kontrolü
+      const isQuestion = value.questionType || (value.soru && value.soru.question);
+      
+      if (isQuestion) {
+        let qTypeLabel = "Soru";
+        let qTypeColor = "primary";
+        
+        if (value.questionType === QuestionType.BOSLUK_DOLDURMA) {
+          qTypeLabel = "Boşluk Doldurma";
+          qTypeColor = "success";
+        } else if (value.questionType === QuestionType.COKTAN_SECMELI) {
+          qTypeLabel = "Çoktan Seçmeli";
+          qTypeColor = "warning";
+        } else if (value.questionType === QuestionType.ESLESTIRME) {
+          qTypeLabel = "Eşleştirme";
+          qTypeColor = "info";
+        }
+
+        const questionText = value.soru?.question || value.question || "Soru metni yok";
+        const shortQuestion = questionText.length > 100 ? questionText.substring(0, 100) + "..." : questionText;
+
+        return (
+          <div key={key} className="mb-3">
+            <div className={`card border-${qTypeColor} shadow-sm`}>
+              <div className="card-header bg-light d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div className="d-flex align-items-center flex-wrap gap-2">
+                  <span className={`badge bg-${qTypeColor}`}>{qTypeLabel}</span>
+                  <strong className="text-dark">{key}</strong>
+                </div>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => startEditing(fieldPath, value)}
+                  >
+                    <i className="bi bi-pencil me-1"></i>
+                    Düzenle
+                  </button>
+                  <button
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => deleteField(fieldPath)}
+                  >
+                    <i className="bi bi-trash me-1"></i>
+                    Sil
+                  </button>
+                </div>
+              </div>
+              <div className="card-body">
+                <p className="card-text mb-2">{shortQuestion}</p>
+                {value.aciklama && (
+                  <small className="text-muted d-block mb-2">
+                    <i className="bi bi-info-circle me-1"></i>
+                    {value.aciklama}
+                  </small>
+                )}
+                <div className="d-flex gap-2">
+                  {value.soru?.options && (
+                    <span className="badge bg-light text-dark border">
+                      {value.soru.options.length} Seçenek
+                    </span>
+                  )}
+                  {value.zorluk && (
+                    <span className="badge bg-light text-dark border">
+                      {value.zorluk}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       const keys = Object.keys(value);
-      const hasNestedObjects = keys.some(
-        (k) => typeof value[k] === "object" && value[k] !== null
-      );
+      
 
       return (
         <div key={key} className="mb-3">
@@ -226,17 +614,23 @@ export default function AdminEslestirmeEditPage() {
                 </button>
                 <strong className="text-primary fs-6">{key}</strong>
                 <span className="badge bg-secondary">{keys.length} alan</span>
-                {hasNestedObjects && (
-                  <span className="badge bg-info">Nested</span>
-                )}
+               
               </div>
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => startEditing(fieldPath, value)}
-              >
-                <i className="bi bi-pencil me-1"></i>
-                <span className="d-none d-sm-inline">Düzenle</span>
-              </button>
+              <div className="d-flex gap-2">
+                <button
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={() => startEditing(fieldPath, value)}
+                >
+                  <i className="bi bi-pencil me-1"></i>
+                  <span className="d-none d-sm-inline">Düzenle</span>
+                </button>
+                <button
+                  className="btn btn-sm btn-outline-danger"
+                  onClick={() => deleteField(fieldPath)}
+                >
+                  <i className="bi bi-trash"></i>
+                </button>
+              </div>
             </div>
             {isExpanded && (
               <div className="card-body">
@@ -282,13 +676,21 @@ export default function AdminEslestirmeEditPage() {
                 <strong className="text-info fs-6">{key}</strong>
                 <span className="badge bg-info">{value.length} öğe</span>
               </div>
-              <button
-                className="btn btn-sm btn-outline-primary"
-                onClick={() => startEditing(fieldPath, value)}
-              >
-                <i className="bi bi-pencil me-1"></i>
-                <span className="d-none d-sm-inline">Düzenle</span>
-              </button>
+              <div className="d-flex gap-2">
+                <button
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={() => startEditing(fieldPath, value)}
+                >
+                  <i className="bi bi-pencil me-1"></i>
+                  <span className="d-none d-sm-inline">Düzenle</span>
+                </button>
+                <button
+                  className="btn btn-sm btn-outline-danger"
+                  onClick={() => deleteField(fieldPath)}
+                >
+                  <i className="bi bi-trash"></i>
+                </button>
+              </div>
             </div>
             {isExpanded && (
               <div className="card-body">
@@ -380,7 +782,29 @@ export default function AdminEslestirmeEditPage() {
   }
 
   const fields = Object.keys(document).filter((key) => key !== "id");
-  const filteredFields = fields.filter((key) => {
+  
+  // Level'ları order alanına göre sırala
+  const sortedFields = fields.sort((a, b) => {
+    const valA = document[a];
+    const valB = document[b];
+    
+    // Level ile başlayan alanları order'a göre sırala
+    if (a.startsWith("level") && b.startsWith("level")) {
+      const orderA = valA?.order || parseInt(a.replace(/\D/g, "")) || 0;
+      const orderB = valB?.order || parseInt(b.replace(/\D/g, "")) || 0;
+      if (orderA !== orderB) return orderA - orderB;
+    }
+    // Level olmayan alanları alfabetik sırala
+    if (!a.startsWith("level") && !b.startsWith("level")) {
+      return a.localeCompare(b);
+    }
+    // Level'lar önce gelsin
+    if (a.startsWith("level") && !b.startsWith("level")) return -1;
+    if (!a.startsWith("level") && b.startsWith("level")) return 1;
+    return a.localeCompare(b);
+  });
+  
+  const filteredFields = sortedFields.filter((key) => {
     if (!searchTerm) return true;
     return key.toLowerCase().includes(searchTerm.toLowerCase());
   });
@@ -454,6 +878,43 @@ export default function AdminEslestirmeEditPage() {
                         <i className="bi bi-arrow-clockwise me-1"></i>
                         Yenile
                       </button>
+                      
+                      {/* Soru Ekleme Butonları */}
+                      <div className="ms-auto d-flex gap-2">
+                        <button
+                          className="btn btn-outline-primary btn-sm"
+                          onClick={() => setShowLevelModal(true)}
+                          title="Yeni Level Grubu Ekle"
+                        >
+                          <i className="bi bi-folder-plus me-1"></i>
+                          Level Ekle
+                        </button>
+                        <div className="vr mx-1"></div>
+                        <button
+                          className="btn btn-success btn-sm"
+                          onClick={() => openQuestionModal(QuestionType.BOSLUK_DOLDURMA)}
+                          title="Boşluk Doldurma Sorusu Ekle"
+                        >
+                          <i className="bi bi-plus-circle me-1"></i>
+                          Boşluk Doldurma
+                        </button>
+                        <button
+                          className="btn btn-success btn-sm"
+                          onClick={() => openQuestionModal(QuestionType.COKTAN_SECMELI)}
+                          title="Çoktan Seçmeli Soru Ekle"
+                        >
+                          <i className="bi bi-plus-circle me-1"></i>
+                          Çoktan Seçmeli
+                        </button>
+                        <button
+                          className="btn btn-success btn-sm"
+                          onClick={() => openQuestionModal(QuestionType.ESLESTIRME)}
+                          title="Eşleştirme Sorusu Ekle"
+                        >
+                          <i className="bi bi-plus-circle me-1"></i>
+                          Eşleştirme
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -567,6 +1028,577 @@ export default function AdminEslestirmeEditPage() {
                     <>
                       <i className="bi bi-check-circle me-1"></i>
                       Kaydet
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Question Modal */}
+      {showQuestionModal && questionType && (
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          tabIndex={-1}
+        >
+          <div className="modal-dialog modal-dialog-centered modal-xl">
+            <div className="modal-content">
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title">
+                  <i className="bi bi-question-circle me-2"></i>
+                  {questionType === QuestionType.BOSLUK_DOLDURMA
+                    ? "Boşluk Doldurma Sorusu"
+                    : questionType === QuestionType.COKTAN_SECMELI
+                    ? "Çoktan Seçmeli Soru"
+                    : "Eşleştirme Sorusu"}
+                  {editingField && (
+                    <small className="ms-2">
+                      <code className="text-white">{editingField}</code>
+                    </small>
+                  )}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={cancelQuestionModal}
+                  disabled={saving}
+                ></button>
+              </div>
+              <div className="modal-body">
+                {/* Level Bilgileri - Sadece yeni soru eklerken */}
+                {!editingField && (
+                  <div className="row mb-3">
+                    <div className="col-md-6">
+                      <label htmlFor="levelGroup" className="form-label">
+                        Level Grubu <span className="text-danger">*</span>
+                      </label>
+                      <select
+                        id="levelGroup"
+                        className="form-select"
+                        value={questionFormData.levelGroup}
+                        onChange={(e) =>
+                          setQuestionFormData((prev) => ({
+                            ...prev,
+                            levelGroup: e.target.value,
+                          }))
+                        }
+                      >
+                        <option value="">Seçiniz...</option>
+                        {sortedFields
+                          .filter((key) => {
+                            const val = document[key];
+                            // Level ile başlıyorsa VEYA (obje ise VE (title var VEYA level var VEYA sorular var))
+                            return (
+                              key.startsWith("level") ||
+                              (typeof val === "object" &&
+                                val !== null &&
+                                (val.title || val.level || Array.isArray(val.sorular)))
+                            );
+                          })
+                          .map((level) => (
+                            <option key={level} value={level}>
+                              {level} {document[level]?.title ? `(${document[level].title})` : ""}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                    <div className="col-md-6">
+                      <label htmlFor="levelNumber" className="form-label">
+                        Soru Numarası <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="levelNumber"
+                        className="form-control"
+                        value={questionFormData.levelNumber}
+                        onChange={(e) =>
+                          setQuestionFormData((prev) => ({
+                            ...prev,
+                            levelNumber: e.target.value,
+                          }))
+                        }
+                        placeholder="Örn: 1, 2, 3..."
+                      />
+                    </div>
+                    <div className="col-12 mt-2">
+                      <small className="form-text text-muted">
+                        Soru <code>{questionFormData.levelGroup || "..."}.{questionFormData.levelNumber || "..."}</code> olarak kaydedilecektir
+                      </small>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Soru Metni */}
+                <div className="mb-3">
+                  <label htmlFor="questionText" className="form-label">
+                    Soru Metni <span className="text-danger">*</span>
+                  </label>
+                  <textarea
+                    id="questionText"
+                    className="form-control"
+                    rows={3}
+                    value={questionFormData.questionText}
+                    onChange={(e) =>
+                      setQuestionFormData((prev) => ({
+                        ...prev,
+                        questionText: e.target.value,
+                      }))
+                    }
+                    placeholder="Soru metnini girin..."
+                  />
+                </div>
+
+                {/* Seçenekler */}
+                {(questionType === QuestionType.BOSLUK_DOLDURMA ||
+                  questionType === QuestionType.COKTAN_SECMELI) && (
+                  <div className="mb-3">
+                    <label className="form-label">
+                      Seçenekler <span className="text-danger">*</span>
+                    </label>
+                    {questionFormData.options.map((option, idx) => (
+                      <div key={idx} className="input-group mb-2">
+                        <span className="input-group-text">
+                          {String.fromCharCode(65 + idx)}.
+                        </span>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...questionFormData.options];
+                            newOptions[idx] = e.target.value;
+                            setQuestionFormData((prev) => ({
+                              ...prev,
+                              options: newOptions,
+                            }));
+                          }}
+                          placeholder={`Seçenek ${String.fromCharCode(
+                            65 + idx
+                          )}`}
+                        />
+                        {questionFormData.options.length > 2 && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-danger"
+                            onClick={() => {
+                              const newOptions = questionFormData.options.filter(
+                                (_, i) => i !== idx
+                              );
+                              setQuestionFormData((prev) => ({
+                                ...prev,
+                                options: newOptions,
+                              }));
+                            }}
+                            title="Seçeneği Sil"
+                          >
+                            <i className="bi bi-trash"></i>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => {
+                        setQuestionFormData((prev) => ({
+                          ...prev,
+                          options: [...prev.options, ""],
+                        }));
+                      }}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Seçenek Ekle
+                    </button>
+                  </div>
+                )}
+
+                {/* Eşleştirme için özel alan */}
+                {questionType === QuestionType.ESLESTIRME && (
+                  <div className="mb-3">
+                    <label className="form-label">
+                      Doğru Eşleştirmeler{" "}
+                      <span className="text-danger">*</span>
+                    </label>
+                    <small className="form-text text-muted d-block mb-2">
+                      Her satıra bir eşleştirme girin
+                    </small>
+                    {questionFormData.options.map((option, idx) => (
+                      <div key={idx} className="input-group mb-2">
+                        <span className="input-group-text">{idx + 1}.</span>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...questionFormData.options];
+                            newOptions[idx] = e.target.value;
+                            setQuestionFormData((prev) => ({
+                              ...prev,
+                              options: newOptions,
+                            }));
+                          }}
+                          placeholder={`Eşleştirme ${idx + 1}`}
+                        />
+                        {questionFormData.options.length > 2 && (
+                          <button
+                            type="button"
+                            className="btn btn-outline-danger"
+                            onClick={() => {
+                              const newOptions = questionFormData.options.filter(
+                                (_, i) => i !== idx
+                              );
+                              setQuestionFormData((prev) => ({
+                                ...prev,
+                                options: newOptions,
+                              }));
+                            }}
+                            title="Eşleştirmeyi Sil"
+                          >
+                            <i className="bi bi-trash"></i>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => {
+                        setQuestionFormData((prev) => ({
+                          ...prev,
+                          options: [...prev.options, ""],
+                        }));
+                      }}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Eşleştirme Ekle
+                    </button>
+                  </div>
+                )}
+
+                {/* Yanlış Eşleştirmeler (Sadece Eşleştirme için) */}
+                {questionType === QuestionType.ESLESTIRME && (
+                  <div className="mb-3">
+                    <label className="form-label">
+                      Yanlış Eşleştirmeler (Opsiyonel)
+                    </label>
+                    <small className="form-text text-muted d-block mb-2">
+                      Kullanıcıyı şaşırtmak için yanlış seçenekler ekleyebilirsiniz
+                    </small>
+                    {questionFormData.incorrectOptions.map((option, idx) => (
+                      <div key={idx} className="input-group mb-2">
+                        <span className="input-group-text bg-warning text-dark">
+                          <i className="bi bi-x"></i>
+                        </span>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={option}
+                          onChange={(e) => {
+                            const newOptions = [...questionFormData.incorrectOptions];
+                            newOptions[idx] = e.target.value;
+                            setQuestionFormData((prev) => ({
+                              ...prev,
+                              incorrectOptions: newOptions,
+                            }));
+                          }}
+                          placeholder={`Yanlış Seçenek ${idx + 1}`}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-outline-danger"
+                          onClick={() => {
+                            const newOptions = questionFormData.incorrectOptions.filter(
+                              (_, i) => i !== idx
+                            );
+                            setQuestionFormData((prev) => ({
+                              ...prev,
+                              incorrectOptions: newOptions,
+                            }));
+                          }}
+                          title="Sil"
+                        >
+                          <i className="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-warning text-dark"
+                      onClick={() => {
+                        setQuestionFormData((prev) => ({
+                          ...prev,
+                          incorrectOptions: [...prev.incorrectOptions, ""],
+                        }));
+                      }}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Yanlış Seçenek Ekle
+                    </button>
+                  </div>
+                )}
+
+                {/* Doğru Cevap */}
+                {questionType !== QuestionType.ESLESTIRME && (
+                  <div className="mb-3">
+                    <label htmlFor="correctAnswer" className="form-label">
+                      Doğru Cevap
+                    </label>
+                    <input
+                      type="text"
+                      id="correctAnswer"
+                      className="form-control"
+                      value={questionFormData.correctAnswer}
+                      onChange={(e) =>
+                        setQuestionFormData((prev) => ({
+                          ...prev,
+                          correctAnswer: e.target.value,
+                        }))
+                      }
+                      placeholder={
+                        questionType === QuestionType.BOSLUK_DOLDURMA
+                          ? "Doğru seçeneği girin"
+                          : "Doğru cevabı girin (örn: A, B, C)"
+                      }
+                    />
+                  </div>
+                )}
+
+                {/* Açıklama */}
+                <div className="mb-3">
+                  <label htmlFor="explanation" className="form-label">
+                    Açıklama (Opsiyonel)
+                  </label>
+                  <textarea
+                    id="explanation"
+                    className="form-control"
+                    rows={2}
+                    value={questionFormData.explanation}
+                    onChange={(e) =>
+                      setQuestionFormData((prev) => ({
+                        ...prev,
+                        explanation: e.target.value,
+                      }))
+                    }
+                    placeholder="Cevap açıklaması..."
+                  />
+                </div>
+
+                {/* Zorluk */}
+                <div className="row">
+                  <div className="col-md-6 mb-3">
+                    <label htmlFor="difficulty" className="form-label">
+                      Zorluk Seviyesi
+                    </label>
+                    <select
+                      id="difficulty"
+                      className="form-select"
+                      value={questionFormData.difficulty}
+                      onChange={(e) =>
+                        setQuestionFormData((prev) => ({
+                          ...prev,
+                          difficulty: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="kolay">Kolay</option>
+                      <option value="orta">Orta</option>
+                      <option value="zor">Zor</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={cancelQuestionModal}
+                  disabled={saving}
+                >
+                  <i className="bi bi-x-circle me-1"></i>
+                  İptal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-success"
+                  onClick={saveQuestionField}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
+                      Kaydediliyor...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check-circle me-1"></i>
+                      Kaydet
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Level Modal */}
+      {showLevelModal && (
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          tabIndex={-1}
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title">
+                  <i className="bi bi-folder-plus me-2"></i>
+                  Yeni Level Ekle
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowLevelModal(false)}
+                  disabled={saving}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label htmlFor="newLevelName" className="form-label">
+                    Level Adı <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="newLevelName"
+                    className="form-control"
+                    value={newLevelName}
+                    onChange={(e) => setNewLevelName(e.target.value)}
+                    placeholder="Örn: level5"
+                  />
+                  <small className="form-text text-muted">
+                    Yeni bir level grubu oluşturulacak.
+                  </small>
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="newLevelTitle" className="form-label">
+                    Konu Başlığı <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="newLevelTitle"
+                    className="form-control"
+                    value={newLevelTitle}
+                    onChange={(e) => setNewLevelTitle(e.target.value)}
+                    placeholder="Örn: Coğrafi Bölgeler"
+                  />
+                  <small className="form-text text-muted">
+                    Bu level için bir başlık girin.
+                  </small>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowLevelModal(false)}
+                  disabled={saving}
+                >
+                  <i className="bi bi-x-circle me-1"></i>
+                  İptal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={saveNewLevel}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
+                      Oluşturuluyor...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check-circle me-1"></i>
+                      Oluştur
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div
+          className="modal show d-block"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          tabIndex={-1}
+        >
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-danger text-white">
+                <h5 className="modal-title">
+                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                  Silme Onayı
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={saving}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <p className="mb-0 text-dark">
+                  <strong>{fieldToDelete}</strong> alanını silmek istediğinize
+                  emin misiniz?
+                </p>
+                <p className="text-danger small mt-2 mb-0">
+                  <i className="bi bi-info-circle me-1"></i>
+                  Bu işlem geri alınamaz.
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={saving}
+                >
+                  İptal
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  onClick={confirmDelete}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
+                      Siliniyor...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-trash me-1"></i>
+                      Evet, Sil
                     </>
                   )}
                 </button>

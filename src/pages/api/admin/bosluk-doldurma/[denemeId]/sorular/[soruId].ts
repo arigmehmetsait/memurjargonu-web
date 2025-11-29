@@ -5,7 +5,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { denemeId, soruId } = req.query;
+  const { denemeId, soruId, collection } = req.query;
 
   if (
     !denemeId ||
@@ -18,6 +18,9 @@ export default async function handler(
       error: "Deneme ID ve Soru ID gerekli",
     });
   }
+
+  // Koleksiyon adı yoksa varsayılan olarak "sorular" kullan
+  const collectionName = typeof collection === "string" ? collection : "sorular";
 
   if (req.method === "PUT") {
     // Soruyu güncelle
@@ -69,7 +72,7 @@ export default async function handler(
 
       // Soru dokümanını kontrol et
       const soruDoc = await denemeDoc.ref
-        .collection("sorular")
+        .collection(collectionName)
         .doc(soruId)
         .get();
 
@@ -101,7 +104,7 @@ export default async function handler(
         updatedAt: new Date(),
       });
 
-      console.log(`Soru güncellendi: ${denemeId}/${soruId}`);
+      console.log(`Soru güncellendi: ${denemeId}/${collectionName}/${soruId}`);
 
       res.status(200).json({
         success: true,
@@ -139,7 +142,7 @@ export default async function handler(
 
       // Soru dokümanını kontrol et
       const soruDoc = await denemeDoc.ref
-        .collection("sorular")
+        .collection(collectionName)
         .doc(soruId)
         .get();
 
@@ -154,13 +157,13 @@ export default async function handler(
       await soruDoc.ref.delete();
 
       // Kalan soru sayısını hesapla ve deneme soru sayısını güncelle
-      const sorularSnapshot = await denemeDoc.ref.collection("sorular").get();
+      const sorularSnapshot = await denemeDoc.ref.collection(collectionName).get();
       await denemeDoc.ref.update({
         soruSayisi: sorularSnapshot.size,
         updatedAt: new Date(),
       });
 
-      console.log(`Soru silindi: ${denemeId}/${soruId}`);
+      console.log(`Soru silindi: ${denemeId}/${collectionName}/${soruId}`);
 
       res.status(200).json({
         success: true,
