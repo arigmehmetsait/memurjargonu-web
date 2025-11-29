@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { FieldValue } from "firebase-admin/firestore";
 
 export default async function handler(
   req: NextApiRequest,
@@ -72,8 +73,42 @@ export default async function handler(
         });
       }
 
+      // Eğer level oluşturuluyor veya güncelleniyorsa, otomatik order ekle
+      let finalValue = value;
+      if (fieldPath.startsWith("level") && typeof value === "object" && value !== null) {
+        const doc = await docRef.get();
+        const docData = (doc.exists ? doc.data() : {}) as Record<string, any>;
+        
+        // Mevcut level'ları bul ve en yüksek order'ı hesapla
+        let maxOrder = 0;
+        Object.keys(docData).forEach((key) => {
+          if (key.startsWith("level") && docData[key] && typeof docData[key] === "object") {
+            const levelOrder = docData[key].order;
+            if (typeof levelOrder === "number" && levelOrder > maxOrder) {
+              maxOrder = levelOrder;
+            }
+          }
+        });
+        
+        // Eğer bu level zaten varsa ve order'ı varsa, order'ı koru
+        const existingLevel = docData[fieldPath];
+        if (existingLevel && typeof existingLevel === "object" && typeof existingLevel.order === "number") {
+          // Mevcut order'ı koru
+          finalValue = {
+            ...value,
+            order: existingLevel.order,
+          };
+        } else {
+          // Yeni level için order = maxOrder + 1
+          finalValue = {
+            ...value,
+            order: maxOrder + 1,
+          };
+        }
+      }
+
       const updateData: Record<string, unknown> = {
-        [fieldPath]: value,
+        [fieldPath]: finalValue,
         updatedAt: new Date(),
       };
 
@@ -87,8 +122,10 @@ export default async function handler(
       });
     }
 
-    // DELETE - Dokümanı sil
+    // DELETE - Alan veya doküman sil
     if (req.method === "DELETE") {
+      const { fieldPath } = req.body;
+
       const doc = await docRef.get();
 
       if (!doc.exists) {
@@ -98,6 +135,24 @@ export default async function handler(
         });
       }
 
+      // Eğer fieldPath varsa sadece o alanı sil
+      if (fieldPath && typeof fieldPath === "string") {
+        const deleteData: Record<string, any> = {
+          [fieldPath]: FieldValue.delete(),
+          updatedAt: new Date(),
+        };
+
+        await docRef.update(deleteData);
+
+        console.log(`Eşleştirme dokümanından alan silindi: ${docId} - ${fieldPath}`);
+
+        return res.status(200).json({
+          success: true,
+          message: "Alan başarıyla silindi",
+        });
+      }
+
+      // fieldPath yoksa tüm dokümanı sil
       await docRef.delete();
 
       console.log(`Eşleştirme dokümanı silindi: ${docId}`);

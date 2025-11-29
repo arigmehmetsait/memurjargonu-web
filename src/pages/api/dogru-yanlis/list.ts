@@ -27,37 +27,62 @@ export default async function handler(
       };
     });
 
-    // Soru sayılarını hesapla
-    const denemelerWithSoruSayisi = await Promise.all(
+    // Alt koleksiyonları ve soru sayılarını hesapla
+    const denemelerWithCollections = await Promise.all(
       denemeler.map(async (deneme) => {
         try {
-          const sorularSnapshot = await adminDb
-            .collection("dogruyanlis")
-            .doc(deneme.id)
-            .collection("sorular")
-            .get();
+          const denemeRef = adminDb.collection("dogruyanlis").doc(deneme.id);
+          
+          // Alt koleksiyonları listele
+          const collections = await denemeRef.listCollections();
+          
+          // Her koleksiyonun soru sayısını al (metadata dokümanını hariç tut)
+          const collectionsWithCount = await Promise.all(
+            collections.map(async (collection) => {
+              const snapshot = await collection.get();
+              // Metadata dokümanını saymadan soru sayısını hesapla
+              const soruSayisi = snapshot.docs.filter(
+                (doc) => doc.id !== "_metadata"
+              ).length;
+              return {
+                id: collection.id,
+                name: collection.id,
+                soruSayisi,
+              };
+            })
+          );
+          
+          // Toplam soru sayısını hesapla
+          const toplamSoruSayisi = collectionsWithCount.reduce(
+            (sum, col) => sum + col.soruSayisi,
+            0
+          );
 
           return {
             ...deneme,
-            soruSayisi: sorularSnapshot.size,
+            soruSayisi: toplamSoruSayisi,
+            collections: collectionsWithCount,
           };
         } catch (error) {
-          console.error(`${deneme.id} soru sayısı alınırken hata:`, error);
-          return deneme;
+          console.error(`${deneme.id} alt koleksiyonları alınırken hata:`, error);
+          return {
+            ...deneme,
+            collections: [],
+          };
         }
       })
     );
 
     // İsme göre sırala
-    denemelerWithSoruSayisi.sort((a, b) => a.name.localeCompare(b.name, "tr"));
+    denemelerWithCollections.sort((a, b) => a.name.localeCompare(b.name, "tr"));
 
     console.log(
-      `Doğru-Yanlış denemeleri hazırlandı: ${denemelerWithSoruSayisi.length} deneme`
+      `Doğru-Yanlış denemeleri hazırlandı: ${denemelerWithCollections.length} deneme`
     );
 
     res.status(200).json({
       success: true,
-      data: denemelerWithSoruSayisi,
+      data: denemelerWithCollections,
     });
   } catch (error) {
     console.error("Doğru-Yanlış denemeleri listesi alınırken hata:", error);

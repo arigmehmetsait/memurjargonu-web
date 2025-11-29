@@ -9,7 +9,7 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { denemeId } = req.query;
+  const { denemeId, collection } = req.query;
 
   if (!denemeId || typeof denemeId !== "string") {
     return res.status(400).json({
@@ -17,6 +17,9 @@ export default async function handler(
       error: "Deneme ID gerekli",
     });
   }
+
+  // Koleksiyon adı yoksa varsayılan olarak "sorular" kullan
+  const collectionName = typeof collection === "string" ? collection : "sorular";
 
   try {
     // Deneme dokümanını kontrol et
@@ -34,10 +37,13 @@ export default async function handler(
 
     const denemeData = denemeDoc.data();
 
-    // Sorular alt koleksiyonunu getir
-    const sorularSnapshot = await denemeDoc.ref.collection("sorular").get();
+    // Seçilen alt koleksiyonu getir
+    const sorularSnapshot = await denemeDoc.ref.collection(collectionName).get();
 
-    const sorular = sorularSnapshot.docs.map((doc) => {
+    // Metadata dokümanını filtrele
+    const sorular = sorularSnapshot.docs
+      .filter((doc) => doc.id !== "_metadata")
+      .map((doc) => {
       const data = doc.data();
 
       // Resimdeki modele göre sadece text ve correct alanları
@@ -81,7 +87,7 @@ export default async function handler(
     });
 
     console.log(
-      `Doğru-Yanlış denemesi soruları hazırlandı: ${sorular.length} soru`
+      `Doğru-Yanlış denemesi ${collectionName} soruları hazırlandı: ${sorular.length} soru`
     );
 
     res.status(200).json({
@@ -89,6 +95,7 @@ export default async function handler(
       data: {
         denemeId,
         denemeName: denemeData?.name || denemeId,
+        collectionName,
         sorular,
         totalCount: sorular.length,
       },

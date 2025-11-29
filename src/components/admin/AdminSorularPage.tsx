@@ -41,7 +41,8 @@ export default function AdminSorularPage({
   denemeType,
 }: AdminSorularPageProps) {
   const router = useRouter();
-  const { denemeId } = router.query;
+  const { denemeId, collection } = router.query;
+  const collectionName = typeof collection === "string" ? collection : "sorular";
 
   const config = getDenemeConfig(denemeType);
 
@@ -212,7 +213,7 @@ export default function AdminSorularPage({
     if (denemeId && typeof denemeId === "string") {
       fetchSorular();
     }
-  }, [denemeId, denemeType]);
+  }, [denemeId, denemeType, collectionName]);
 
   const fetchSorular = async () => {
     if (!denemeId || typeof denemeId !== "string") return;
@@ -221,8 +222,10 @@ export default function AdminSorularPage({
       setLoading(true);
       setError(null);
 
-      console.log("Sorular API'sine istek gönderiliyor...");
-      const response = await fetch(`${config.apiPath}/${denemeId}/sorular`);
+      console.log("Sorular API'sine istek gönderiliyor...", { collectionName });
+      const response = await fetch(
+        `${config.apiPath}/${denemeId}/sorular?collection=${encodeURIComponent(collectionName)}`
+      );
       const data = await response.json();
 
       console.log("Sorular API yanıtı:", data);
@@ -350,24 +353,30 @@ export default function AdminSorularPage({
           subject: editForm.konu?.trim() || config.defaultKonu,
         };
       } else {
+        // Mevzuat, Coğrafya, Tarih, Genel için Firebase formatı
+        const trimmedOptions = editForm.secenekler
+          .map((secenek) => secenek.trim())
+          .filter((secenek) => secenek.length > 0);
+
         requestBody = {
-          ...editForm,
-          soru: editForm.soru.trim(),
-          cevap: editForm.cevap.trim(),
-          konu: editForm.konu?.trim() || config.defaultKonu,
-          secenekler: editForm.secenekler.map((secenek) => secenek.trim()),
+          questionText: editForm.soru.trim(),
+          correctAnswer: editForm.cevap.trim(),
+          options: trimmedOptions,
+          explanation: editForm.aciklama?.trim() || "",
+          difficulty: editForm.zorluk,
+          subject: editForm.konu?.trim() || config.defaultKonu,
         };
       }
 
       const response = await fetch(
-        `${config.adminApiPath}/${denemeId}/sorular/${selectedSoru.id}`,
+        `${config.adminApiPath}/${denemeId}/sorular/${selectedSoru.id}?collection=${encodeURIComponent(collectionName)}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify({ ...requestBody, collection: collectionName }),
         }
       );
 
@@ -396,7 +405,7 @@ export default function AdminSorularPage({
       const token = await getValidToken();
 
       const response = await fetch(
-        `${config.adminApiPath}/${denemeId}/sorular/${selectedSoru.id}`,
+        `${config.adminApiPath}/${denemeId}/sorular/${selectedSoru.id}?collection=${encodeURIComponent(collectionName)}`,
         {
           method: "DELETE",
           headers: {
@@ -519,24 +528,26 @@ export default function AdminSorularPage({
           subject: trimmedKonu,
         };
       } else {
+        // Mevzuat, Coğrafya, Tarih, Genel için Firebase formatı
         requestBody = {
-          ...newSoruForm,
-          soru: trimmedSoru,
-          cevap: trimmedCevap,
-          konu: trimmedKonu,
-          secenekler: trimmedSecenekler,
+          questionText: trimmedSoru,
+          correctAnswer: trimmedCevap,
+          options: filledSecenekler,
+          explanation: trimmedAciklama || "",
+          difficulty: newSoruForm.zorluk,
+          subject: trimmedKonu,
         };
       }
 
       const response = await fetch(
-        `${config.adminApiPath}/${denemeId}/sorular`,
+        `${config.adminApiPath}/${denemeId}/sorular?collection=${encodeURIComponent(collectionName)}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify({ ...requestBody, collection: collectionName }),
         }
       );
 
@@ -599,7 +610,7 @@ export default function AdminSorularPage({
     let exportRows: Array<Record<string, string>>;
 
     if (denemeType === "dogruyanlis") {
-      // Doğru-yanlış için sadece gerekli kolonlar: soru, cevap, aciklama, zorluk, konu
+      // Doğru-yanlış için import formatına uygun: soru, cevap, aciklama, zorluk, konu
       exportRows = hasSorular
         ? denemeData.sorular.map((soru) => ({
             soru: soru.soru || "",
@@ -618,7 +629,8 @@ export default function AdminSorularPage({
             },
           ];
     } else if (denemeType === "boslukdoldurma") {
-      const optionHeaders = ["A", "B", "C", "D", "E", "F"];
+      // Boşluk doldurma için import formatına uygun: soru, dogrucevap, secenek_a, secenek_b, vb., aciklama, zorluk, konu
+      const optionHeaders = ["a", "b", "c", "d", "e", "f"];
 
       exportRows = hasSorular
         ? denemeData.sorular.map((soru) => {
@@ -626,13 +638,12 @@ export default function AdminSorularPage({
               soru: soru.soru || "",
               dogrucevap: soru.cevap || "",
               aciklama: soru.aciklama || "",
-              zorluk: soru.zorluk || "",
+              zorluk: soru.zorluk || "orta",
               konu: soru.konu || config.defaultKonu,
             };
 
             optionHeaders.forEach((header, index) => {
-              row[`secenek_${header.toLowerCase()}`] =
-                soru.secenekler[index] || "";
+              row[`secenek_${header}`] = soru.secenekler[index] || "";
             });
 
             return row;
@@ -641,7 +652,7 @@ export default function AdminSorularPage({
             optionHeaders.reduce(
               (acc, header) => ({
                 ...acc,
-                [`secenek_${header.toLowerCase()}`]: "",
+                [`secenek_${header}`]: "",
               }),
               {
                 soru: "",
@@ -653,28 +664,23 @@ export default function AdminSorularPage({
             ),
           ];
     } else {
-      // Diğer deneme türleri için mevcut format
+      // Diğer deneme türleri için import formatına uygun: soru, dogrucevap (veya cevap), aciklama, zorluk, konu
+      // Not: Diğer türler için import kısmında özel bir format yok, bu yüzden genel format kullanıyoruz
       exportRows = hasSorular
-        ? denemeData.sorular.map((soru, index) => ({
-            "Soru No": String(index + 1),
-            Soru: soru.soru || "",
-            "Doğru Cevap": soru.cevap || "",
-            "Doğru Seçenek": String.fromCharCode(65 + soru.dogruSecenek),
-            Seçenekler: soru.secenekler.join(" | "),
-            Zorluk: soru.zorluk || "",
-            Konu: soru.konu || "",
-            Açıklama: soru.aciklama || "",
+        ? denemeData.sorular.map((soru) => ({
+            soru: soru.soru || "",
+            dogrucevap: soru.cevap || "",
+            aciklama: soru.aciklama || "",
+            zorluk: soru.zorluk || "orta",
+            konu: soru.konu || config.defaultKonu,
           }))
         : [
             {
-              "Soru No": "",
-              Soru: "",
-              "Doğru Cevap": "",
-              "Doğru Seçenek": "",
-              Seçenekler: "",
-              Zorluk: "",
-              Konu: config.defaultKonu,
-              Açıklama: "",
+              soru: "",
+              dogrucevap: "",
+              aciklama: "",
+              zorluk: "",
+              konu: config.defaultKonu,
             },
           ];
     }
@@ -891,14 +897,14 @@ export default function AdminSorularPage({
           }
 
           const response = await fetch(
-            `${config.adminApiPath}/${denemeId}/sorular`,
+            `${config.adminApiPath}/${denemeId}/sorular?collection=${encodeURIComponent(collectionName)}`,
             {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
               },
-              body: JSON.stringify(requestBody),
+              body: JSON.stringify({ ...requestBody, collection: collectionName }),
             }
           );
 
@@ -958,9 +964,20 @@ export default function AdminSorularPage({
                 <h1 className="h2">
                   <i className="bi bi-list-ul me-2"></i>
                   {denemeData?.denemeName || "Deneme"} - {config.title}
+                  {collectionName !== "sorular" && (
+                    <span className="badge bg-primary ms-2 fs-6">
+                      <i className="bi bi-folder2-open me-1"></i>
+                      {collectionName}
+                    </span>
+                  )}
                 </h1>
                 {denemeData && (
                   <p className="text-muted mb-0">
+                    {collectionName !== "sorular" && (
+                      <span className="me-2">
+                        <strong>Koleksiyon:</strong> {collectionName} •
+                      </span>
+                    )}
                     {denemeData.totalCount} soru • Admin Panel
                   </p>
                 )}

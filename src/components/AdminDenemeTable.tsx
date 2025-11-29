@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { Deneme, DenemeType, DENEME_API_ENDPOINTS } from "@/types/deneme";
 import LoadingSpinner from "./LoadingSpinner";
 import ConfirmModal from "./ConfirmModal";
+import { toast } from "react-toastify";
 
 interface AdminDenemeTableProps {
   denemeType: DenemeType;
@@ -83,15 +84,18 @@ export default function AdminDenemeTable({
         setShowDeleteModal(false);
         setDenemeToDelete(null);
         fetchDenemeler(); // Listeyi yenile
-        alert(
-          `"${data.data.denemeName}" denemesi başarıyla silindi. ${data.data.deletedQuestionsCount} soru da silindi.`
+        const deletedQuestionsCount = data.data?.deletedQuestionsCount || 0;
+        toast.success(
+          `"${
+            data.data.denemeName || denemeToDelete.name
+          }" denemesi başarıyla silindi. ${deletedQuestionsCount} soru da silindi.`
         );
       } else {
-        alert("Hata: " + data.error);
+        toast.error(data.error || "Deneme silinemedi");
       }
     } catch (err) {
       console.error("Deneme silme hatası:", err);
-      alert("Deneme silinirken bir hata oluştu");
+      toast.error("Deneme silinirken bir hata oluştu");
     } finally {
       setDeleting(false);
     }

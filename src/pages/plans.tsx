@@ -157,7 +157,7 @@ export default function PlansPage() {
                       <button
                         className="btn btn-primary btn-lg w-100"
                         onClick={() => handleSelect(plan)}
-                        disabled={processing === plan.id}
+                        disabled={true}
                       >
                         {processing === plan.id ? (
                           <>
