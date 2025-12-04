@@ -2,10 +2,11 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { CartProvider } from "@/context/CartContext";
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <>
+    <CartProvider>
       <Component {...pageProps} />
       <ToastContainer
         position="top-right"
@@ -17,6 +18,6 @@ export default function App({ Component, pageProps }: AppProps) {
         pauseOnHover
         theme="colored"
       />
-    </>
+    </CartProvider>
   );
 }

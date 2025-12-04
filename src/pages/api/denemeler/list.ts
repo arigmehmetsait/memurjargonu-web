@@ -12,37 +12,52 @@ export default async function handler(
   try {
     console.log("Firebase Admin DB bağlantısı test ediliyor...");
 
+    // Pagination parametrelerini al
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const skip = (page - 1) * pageSize;
+
     // MevzuatDeneme koleksiyonundaki tüm denemeleri getir
     const denemelerSnapshot = await adminDb.collection("MevzuatDeneme").get();
 
-    const denemeler = denemelerSnapshot.docs.map((doc) => ({
+    const allDenemeler = denemelerSnapshot.docs.map((doc) => ({
       id: doc.id,
       name: doc.id,
       soruSayisi: 0,
     }));
 
     // Her deneme için soru sayısını hesapla
-    for (let i = 0; i < denemeler.length; i++) {
+    for (let i = 0; i < allDenemeler.length; i++) {
       try {
         const sorularSnapshot = await adminDb
           .collection("MevzuatDeneme")
-          .doc(denemeler[i].id)
+          .doc(allDenemeler[i].id)
           .collection("sorular")
           .get();
 
-        denemeler[i].soruSayisi = sorularSnapshot.size;
+        allDenemeler[i].soruSayisi = sorularSnapshot.size;
       } catch (soruError) {
         console.error(
-          `${denemeler[i].id} için soru sayısı alınırken hata:`,
+          `${allDenemeler[i].id} için soru sayısı alınırken hata:`,
           soruError
         );
-        denemeler[i].soruSayisi = 0;
+        allDenemeler[i].soruSayisi = 0;
       }
     }
+
+    // Pagination uygula
+    const total = allDenemeler.length;
+    const denemeler = allDenemeler.slice(skip, skip + pageSize);
 
     res.status(200).json({
       success: true,
       data: denemeler,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
     });
   } catch (error) {
     console.error("Denemeler listesi alınırken hata:", error);

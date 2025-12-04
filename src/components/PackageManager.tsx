@@ -9,6 +9,7 @@ import {
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { getValidToken } from "@/utils/tokenCache";
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface PackageManagerProps {
   userId?: string;
@@ -49,6 +50,8 @@ const PackageManager: React.FC<PackageManagerProps> = ({
     type: "success" | "error" | "";
     text: string;
   }>({ type: "", text: "" });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [packageToDelete, setPackageToDelete] = useState<string | null>(null);
 
   // Paket ekleme formu
   const [addForm, setAddForm] = useState({
@@ -184,16 +187,13 @@ const PackageManager: React.FC<PackageManagerProps> = ({
     }
   };
 
-  const removePackage = async (packageType: string) => {
-    if (
-      !window.confirm(
-        `${
-          PACKAGE_INFO[packageType as PackageType]?.name || packageType
-        } paketini kaldırmak istediğinizden emin misiniz?`
-      )
-    ) {
-      return;
-    }
+  const handleRemovePackageClick = (packageType: string) => {
+    setPackageToDelete(packageType);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!packageToDelete) return;
 
     try {
       const idToken = await getValidToken(); // Cache'li token
@@ -205,7 +205,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({
         },
         body: JSON.stringify({
           userId: selectedUserId,
-          packageType,
+          packageType: packageToDelete,
         }),
       });
 
@@ -213,10 +213,14 @@ const PackageManager: React.FC<PackageManagerProps> = ({
       if (!response.ok) throw new Error(data.error || "Paket kaldırılamadı");
 
       setMessage({ type: "success", text: data.message });
+      setShowDeleteModal(false);
+      setPackageToDelete(null);
       fetchUserPackages();
       onPackageChange?.();
     } catch (error: any) {
       setMessage({ type: "error", text: error.message });
+      setShowDeleteModal(false);
+      setPackageToDelete(null);
     }
   };
 
@@ -573,7 +577,7 @@ const PackageManager: React.FC<PackageManagerProps> = ({
                                 </div>
                                 {pkg.isOwned && (
                                   <button
-                                    onClick={() => removePackage(pkg.type)}
+                                    onClick={() => handleRemovePackageClick(pkg.type)}
                                     className="btn btn-outline-danger btn-sm"
                                     title="Paketi kaldır"
                                   >
@@ -607,6 +611,29 @@ const PackageManager: React.FC<PackageManagerProps> = ({
             )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setPackageToDelete(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Paket Kaldırma Onayı"
+        message={
+          packageToDelete
+            ? `${
+                PACKAGE_INFO[packageToDelete as PackageType]?.name ||
+                packageToDelete
+              } paketini kaldırmak istediğinizden emin misiniz?`
+            : ""
+        }
+        confirmText="Tamam"
+        cancelText="İptal"
+        confirmVariant="danger"
+        icon="bi-exclamation-triangle"
+      />
     </div>
   );
 };

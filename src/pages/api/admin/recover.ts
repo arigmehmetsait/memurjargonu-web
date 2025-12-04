@@ -10,25 +10,25 @@ export default async function handler(
   }
 
   try {
-    const { targetUid, adminUid, secretKey } = req.body;
+    const { targetUid, secretKey } = req.body;
 
     // Güvenlik kontrolü - sadece belirli secret key ile çalışsın
     if (secretKey !== process.env.ADMIN_RECOVERY_SECRET) {
       return res.status(403).json({ error: "Invalid secret key" });
     }
 
-    if (!targetUid || !adminUid) {
-      return res.status(400).json({ error: "targetUid and adminUid required" });
+    if (!targetUid) {
+      return res.status(400).json({ error: "targetUid required" });
     }
 
-    // Admin UID'yi seed listesinden kontrol et
+    // Target UID'yi seed listesinden kontrol et
     const seedUids = (process.env.ADMIN_SEED_UIDS || "")
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
 
-    if (!seedUids.includes(adminUid)) {
-      return res.status(403).json({ error: "Admin UID not in seed list" });
+    if (!seedUids.includes(targetUid)) {
+      return res.status(403).json({ error: "Target UID not in seed list" });
     }
 
     // Hedef kullanıcının mevcut claims'lerini al

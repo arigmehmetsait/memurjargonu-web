@@ -225,8 +225,8 @@ export default function PDFManagement() {
 
                   return (
                     <div key={subcategory} className="col-lg-4 col-md-6">
-                      <div className="card h-100 shadow-sm hover-card">
-                        <div className="card-body">
+                      <div className="card h-100 shadow-sm hover-card d-flex flex-column">
+                        <div className="card-body d-flex flex-column">
                           <div className="d-flex align-items-start justify-content-between mb-3">
                             <div className="me-3">
                               <div className="category-icon mb-2">
@@ -262,7 +262,7 @@ export default function PDFManagement() {
                             </div>
                           </div>
 
-                          <div className="d-grid gap-2">
+                          <div className="d-grid gap-2 mt-auto">
                             <Link
                               href={`/admin/content/list?subcategory=${subcategory}`}
                               className="btn btn-outline-primary btn-sm"

@@ -24,25 +24,20 @@ export default function AdminRecoverPage() {
 
   const handleRecover = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentUser) {
-      setMessage({ type: "error", text: "Lütfen önce giriş yapın" });
-      return;
-    }
 
     setLoading(true);
     setMessage({ type: "", text: "" });
 
     try {
-      const idToken = await currentUser.getIdToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
       const response = await fetch("/api/admin/recover", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
+        headers,
         body: JSON.stringify({
           targetUid,
-          adminUid: currentUser.uid,
           secretKey,
         }),
       });
@@ -65,28 +60,6 @@ export default function AdminRecoverPage() {
       setLoading(false);
     }
   };
-
-  if (!currentUser) {
-    return (
-      <div className="min-vh-100 d-flex align-items-center bg-light">
-        <div className="container">
-          <div className="row justify-content-center">
-            <div className="col-md-6">
-              <div className="card shadow">
-                <div className="card-body text-center p-5">
-                  <h4>🔐 Admin Kurtarma Aracı</h4>
-                  <p className="text-muted">Lütfen önce giriş yapın</p>
-                  <a href="/login" className="btn btn-primary">
-                    Giriş Yap
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-vh-100 bg-light">
@@ -119,18 +92,12 @@ export default function AdminRecoverPage() {
                   </h6>
                   <ul className="mb-0">
                     <li>Bu araç admin yetkilerini kurtarmak için kullanılır</li>
-                    <li>Sadece seed listesindeki admin UID'ler kullanabilir</li>
+                    <li>Sadece seed listesindeki UID'ler admin yapılabilir</li>
                     <li>Secret key gereklidir (güvenlik için)</li>
                     <li>
                       İşlem sonrası kullanıcının yeniden giriş yapması gerekir
                     </li>
                   </ul>
-                </div>
-
-                <div className="mb-3">
-                  <strong>Mevcut Kullanıcı:</strong> {currentUser.email}
-                  <br />
-                  <strong>UID:</strong> <code>{currentUser.uid}</code>
                 </div>
 
                 {message.text && (

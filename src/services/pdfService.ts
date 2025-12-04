@@ -11,7 +11,10 @@ import {
   PDFSubcategory,
   PDFCategory,
 } from "@/types/pdf";
-import { getFirebaseCollectionName } from "@/constants/pdfCategories";
+import {
+  getFirebaseCollectionName,
+  PDF_CATEGORY_INFO,
+} from "@/constants/pdfCategories";
 
 /**
  * PDF yönetim servisi - Firestore işlemleri
@@ -48,11 +51,17 @@ export class PDFService {
         stats.countBySubcategory[subcategory] = count;
         stats.totalCount += count;
 
-        // Kategori sayısını güncelle
+        // Kategori sayısını güncelle - PDF_CATEGORY_INFO'dan kategori bilgisini al
+        const categoryInfo = PDF_CATEGORY_INFO[subcategory];
+        if (categoryInfo) {
+          stats.countByCategory[categoryInfo.category] += count;
+        } else {
+          // Fallback: Eğer PDF_CATEGORY_INFO'da yoksa eski mantığı kullan
         if (subcategory.startsWith("ags_")) {
           stats.countByCategory.AGS += count;
         } else if (subcategory.startsWith("kpss_")) {
           stats.countByCategory.KPSS += count;
+          }
         }
 
         // Durum ve dosya boyutlarını hesapla

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { useCart } from "@/context/CartContext";
 
 type Claims = { premium?: boolean; premiumExp?: number };
 
@@ -18,6 +19,7 @@ export default function Header({
   const [user, setUser] = useState<User | null>(null);
   const [claims, setClaims] = useState<Claims>({});
   const [loading, setLoading] = useState(true);
+  const { cart } = useCart();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -131,6 +133,19 @@ export default function Header({
             <li className="nav-item">
               <Link href="/plans" className="nav-link">
                 Paketler
+              </Link>
+            </li>
+          </ul>
+
+          <ul className="navbar-nav align-items-center">
+            <li className="nav-item me-3">
+              <Link href="/cart" className="nav-link position-relative">
+                <i className="bi bi-cart-fill" style={{ fontSize: "1.2rem" }}></i>
+                {cart.length > 0 && (
+                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: "0.7rem" }}>
+                    {cart.length}
+                  </span>
+                )}
               </Link>
             </li>
           </ul>

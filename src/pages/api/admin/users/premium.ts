@@ -82,7 +82,8 @@ export default async function handler(
       premium: isKpssFullActive,
       premiumExp: expMs,
     });
-    await adminAuth.revokeRefreshTokens(uid);
+    // Not: revokeRefreshTokens çağrılmıyor çünkü kullanıcıyı otomatik çıkış yaptırır
+    // Custom claims değişiklikleri bir sonraki token yenilemede otomatik yansıyacak
 
     res.status(200).json({
       ok: true,
