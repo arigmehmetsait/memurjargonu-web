@@ -11,6 +11,7 @@ import { getValidToken } from "@/utils/tokenCache";
 export interface Question {
   answer: string;
   options: string[];
+  questionText?: string;
 }
 
 interface QuestionsManagementProps {
@@ -40,6 +41,7 @@ export default function QuestionsManagement({
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     questionKey: "",
+    questionText: "",
     answer: "",
     options: ["", "", "", ""],
   });
@@ -109,6 +111,24 @@ export default function QuestionsManagement({
     }
   };
 
+  const getNextQuestionKey = () => {
+    const questionKeys = Object.keys(questions);
+    if (questionKeys.length === 0) {
+      return "soru1";
+    }
+
+    // Mevcut soru anahtarlarından sayıları çıkar ve en büyüğünü bul
+    const numbers = questionKeys
+      .map((key) => {
+        const match = key.match(/^soru(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter((num) => num > 0);
+
+    const maxNumber = numbers.length > 0 ? Math.max(...numbers) : 0;
+    return `soru${maxNumber + 1}`;
+  };
+
   const handleOpenModal = (mode: "add" | "edit", questionKey?: string) => {
     setModalMode(mode);
     setShowModal(true);
@@ -118,13 +138,16 @@ export default function QuestionsManagement({
       const question = questions[questionKey];
       setFormData({
         questionKey,
+        questionText: question.questionText || "",
         answer: question.answer || "",
         options: [...question.options, "", "", "", ""].slice(0, 4),
       });
     } else {
       setEditingKey(null);
+      const nextKey = getNextQuestionKey();
       setFormData({
-        questionKey: "",
+        questionKey: nextKey,
+        questionText: "",
         answer: "",
         options: ["", "", "", ""],
       });
@@ -132,11 +155,6 @@ export default function QuestionsManagement({
   };
 
   const handleSaveQuestion = async () => {
-    if (!formData.questionKey.trim()) {
-      toast.warn("Soru anahtarı zorunludur");
-      return;
-    }
-
     const validOptions = formData.options
       .map((opt) => opt.trim())
       .filter(Boolean);
@@ -153,15 +171,24 @@ export default function QuestionsManagement({
       const subcategoryParam = subcategory ? `?subcategory=${subcategory}` : "";
       const url = `${apiBasePath}/${pdfId}/questions${subcategoryParam}`;
       const method = modalMode === "add" ? "POST" : "PUT";
+
+      // Add modunda otomatik questionKey oluştur
+      const questionKey =
+        modalMode === "add"
+          ? getNextQuestionKey()
+          : formData.questionKey.trim();
+
       const body =
         modalMode === "add"
           ? {
-              questionKey: formData.questionKey.trim(),
+              questionKey: questionKey,
+              questionText: formData.questionText.trim(),
               answer: formData.answer.trim(),
               options: validOptions,
             }
           : {
-              updateQuestionKey: formData.questionKey.trim(),
+              updateQuestionKey: editingKey || formData.questionKey.trim(),
+              questionText: formData.questionText.trim(),
               updateAnswer: formData.answer.trim(),
               updateOptions: validOptions,
             };
@@ -238,12 +265,13 @@ export default function QuestionsManagement({
     const questionKeys = Object.keys(questions);
     const hasQuestions = questionKeys.length > 0;
 
-    // Import schema'ya uygun export - questionKey, answer, option1, option2, option3, option4
+    // Import schema'ya uygun export - questionKey, questionText, answer, option1, option2, option3, option4
     const exportRows = hasQuestions
       ? questionKeys.map((key) => {
           const question = questions[key];
           return {
             questionKey: key,
+            questionText: question.questionText || "",
             answer: question.answer || "",
             option1: question.options[0] || "",
             option2: question.options[1] || "",
@@ -254,6 +282,7 @@ export default function QuestionsManagement({
       : [
           {
             questionKey: "",
+            questionText: "",
             answer: "",
             option1: "",
             option2: "",
@@ -298,20 +327,52 @@ export default function QuestionsManagement({
 
       const imported: Array<{
         key: string;
+        questionText: string;
         answer: string;
         options: string[];
       }> = [];
 
-      rows.forEach((row) => {
+      // Mevcut soru anahtarlarını al
+      const existingKeys = new Set(Object.keys(questions));
+
+      // Otomatik questionKey için başlangıç sayısını belirle
+      const existingNumbers = Array.from(existingKeys)
+        .map((key) => {
+          const match = key.match(/^soru(\d+)$/);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter((num) => num > 0);
+      let nextAutoNumber =
+        existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+
+      rows.forEach((row, index) => {
         const normalized: Record<string, any> = {};
         Object.keys(row).forEach((key) => {
           normalized[key.trim().toLowerCase()] = row[key];
         });
 
-        const questionKey = String(
+        let questionKey = String(
           normalized["questionkey"] ||
             normalized["key"] ||
             normalized["soru"] ||
+            ""
+        ).trim();
+
+        // Eğer questionKey yoksa veya boşsa, otomatik oluştur
+        if (!questionKey) {
+          // Çakışma olmaması için mevcut key'leri kontrol et
+          while (existingKeys.has(`soru${nextAutoNumber}`)) {
+            nextAutoNumber++;
+          }
+          questionKey = `soru${nextAutoNumber}`;
+          existingKeys.add(questionKey);
+          nextAutoNumber++;
+        }
+
+        const questionText = String(
+          normalized["questiontext"] ||
+            normalized["sorutext"] ||
+            normalized["sorumetni"] ||
             ""
         ).trim();
         const answer = String(
@@ -324,12 +385,13 @@ export default function QuestionsManagement({
           .filter((opt) => opt !== undefined && String(opt).trim() !== "")
           .map((opt) => String(opt).trim());
 
-        if (!questionKey || options.length < 2) {
+        if (options.length < 2) {
           return;
         }
 
         imported.push({
           key: questionKey,
+          questionText,
           answer,
           options,
         });
@@ -359,6 +421,7 @@ export default function QuestionsManagement({
               },
               body: JSON.stringify({
                 questionKey: question.key,
+                questionText: question.questionText,
                 answer: question.answer,
                 options: question.options,
               }),
@@ -483,6 +546,12 @@ export default function QuestionsManagement({
                   </div>
                 </div>
                 <div className="card-body">
+                  {question.questionText && (
+                    <div className="mb-3">
+                      <strong>Soru Metni:</strong>
+                      <p className="mb-0 mt-1">{question.questionText}</p>
+                    </div>
+                  )}
                   <div className="mb-3">
                     <strong>Doğru Cevap:</strong>
                     <br />
@@ -536,23 +605,34 @@ export default function QuestionsManagement({
                 ></button>
               </div>
               <div className="modal-body">
+                {modalMode === "edit" && (
+                  <div className="mb-3">
+                    <label className="form-label">
+                      Soru Anahtarı <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={formData.questionKey}
+                      disabled
+                      readOnly
+                    />
+                  </div>
+                )}
+
                 <div className="mb-3">
-                  <label className="form-label">
-                    Soru Anahtarı <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    type="text"
+                  <label className="form-label">Soru Metni</label>
+                  <textarea
                     className="form-control"
-                    value={formData.questionKey}
+                    rows={3}
+                    value={formData.questionText}
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        questionKey: e.target.value,
+                        questionText: e.target.value,
                       }))
                     }
-                    disabled={modalMode === "edit"}
-                    placeholder="soru1"
-                    required
+                    placeholder="Soru metnini buraya yazın..."
                   />
                 </div>
 
@@ -659,8 +739,13 @@ export default function QuestionsManagement({
         columns={[
           {
             name: "questionKey",
-            required: true,
-            description: "Benzersiz soru anahtarı",
+            required: false,
+            description: "Soru anahtarı (boş bırakılırsa otomatik oluşturulur)",
+          },
+          {
+            name: "questionText",
+            required: false,
+            description: "Soru metni",
           },
           { name: "answer", required: false },
           { name: "option1", required: true },
@@ -670,7 +755,8 @@ export default function QuestionsManagement({
         ]}
         exampleData={[
           {
-            questionKey: "soru1",
+            questionKey: "",
+            questionText: "Bu bir örnek soru metnidir.",
             answer: "a",
             option1: "Seçenek A",
             option2: "Seçenek B",
@@ -678,7 +764,8 @@ export default function QuestionsManagement({
             option4: "Seçenek D",
           },
           {
-            questionKey: "soru2",
+            questionKey: "",
+            questionText: "Başka bir örnek soru metni.",
             answer: "b",
             option1: "İlk seçenek",
             option2: "İkinci seçenek",

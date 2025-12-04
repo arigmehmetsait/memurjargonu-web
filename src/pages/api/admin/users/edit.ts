@@ -62,6 +62,27 @@ export default async function handler(
         // Premium kaldırılıyorsa, bitiş tarihini kaldır
         updateData.premiumExpiry = null;
       }
+
+      // Custom claims'i güncelle (admin claim'ini koru)
+      const userRecord = await adminAuth.getUser(uid);
+      const existingClaims = userRecord.customClaims || {};
+      
+      const expiryDate = isPremium 
+        ? (() => {
+            const exp = new Date();
+            exp.setFullYear(exp.getFullYear() + 1);
+            return exp.getTime();
+          })()
+        : null;
+
+      await adminAuth.setCustomUserClaims(uid, {
+        ...existingClaims, // Admin claim'ini koru
+        premium: isPremium,
+        premiumExp: expiryDate || Date.now(),
+      });
+      
+      // Not: revokeRefreshTokens çağrılmıyor çünkü kullanıcıyı otomatik çıkış yaptırır
+      // Custom claims değişiklikleri bir sonraki token yenilemede otomatik yansıyacak
     }
 
     if (isBlocked !== undefined) {

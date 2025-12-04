@@ -63,7 +63,7 @@ export default function AdminSorularPage({
   const [editForm, setEditForm] = useState({
     soru: "",
     cevap: "",
-    secenekler: ["", "", "", ""],
+    secenekler: ["", "", "", "", ""],
     dogruSecenek: 0,
     aciklama: "",
     zorluk: "orta",
@@ -74,7 +74,7 @@ export default function AdminSorularPage({
   const [newSoruForm, setNewSoruForm] = useState({
     soru: "",
     cevap: "",
-    secenekler: ["", "", "", ""],
+    secenekler: ["", "", "", "", ""],
     dogruSecenek: 0,
     aciklama: "",
     zorluk: "orta",
@@ -206,6 +206,84 @@ export default function AdminSorularPage({
       };
     }
 
+    // Mevzuat, Coğrafya, Tarih, Genel için çoktan seçmeli format
+    if (denemeType === "mevzuat" || denemeType === "cografya" || denemeType === "tarih" || denemeType === "genel") {
+      return {
+        title: "Excel'den Toplu Soru Ekle",
+        description:
+          "Çoktan seçmeli soruları Excel dosyasından toplu olarak içe aktarabilirsiniz. Her soru için en az iki seçenek girin ve doğru cevabı işaretleyin.",
+        columns: [
+          {
+            name: "soru",
+            required: true,
+            description: "Soru metni",
+          },
+          {
+            name: "secenek_a",
+            required: true,
+            description: "A seçeneği",
+          },
+          {
+            name: "secenek_b",
+            required: true,
+            description: "B seçeneği",
+          },
+          {
+            name: "secenek_c",
+            required: false,
+            description: "C seçeneği (opsiyonel)",
+          },
+          {
+            name: "secenek_d",
+            required: false,
+            description: "D seçeneği (opsiyonel)",
+          },
+          {
+            name: "secenek_e",
+            required: false,
+            description: "E seçeneği (opsiyonel)",
+          },
+          {
+            name: "dogrucevap",
+            required: true,
+            description: "Doğru seçeneğin metni",
+          },
+          {
+            name: "aciklama",
+            required: false,
+            description: "Açıklama (opsiyonel)",
+          },
+          {
+            name: "zorluk",
+            required: false,
+            description: 'Zorluk seviyesi: "kolay", "orta" veya "zor"',
+          },
+          {
+            name: "konu",
+            required: false,
+            description: "Konu (opsiyonel, varsayılan: deneme türüne göre)",
+          },
+        ],
+        exampleData: [
+          {
+            soru: "Aşağıdakilerden hangisi Türkiye'nin başkentidir?",
+            secenek_a: "İstanbul",
+            secenek_b: "Ankara",
+            secenek_c: "İzmir",
+            secenek_d: "Bursa",
+            secenek_e: "",
+            dogrucevap: "Ankara",
+            aciklama: "Türkiye'nin başkenti 1923'ten beri Ankara'dır.",
+            zorluk: "kolay",
+            konu: config.defaultKonu,
+          },
+        ],
+        accept: ".xlsx,.xls",
+        buttonText: "Soruları İçe Aktar",
+        buttonIcon: "bi-file-earmark-spreadsheet",
+      };
+    }
+
     return dogruYanlisConfig;
   })();
 
@@ -305,10 +383,24 @@ export default function AdminSorularPage({
         }
       }
 
+        // Firebase'den gelen options'lardan prefix'leri kaldır (eğer varsa)
+        const cleanedOptions = soru.secenekler.map((opt: string) => {
+          return opt.replace(/^[A-E]\)\s*/, "");
+        });
+
+        // Eğer 5'ten az seçenek varsa, boş string'lerle doldur
+        const paddedOptions = [...cleanedOptions];
+        while (paddedOptions.length < 5) {
+          paddedOptions.push("");
+        }
+
+        // Firebase'den gelen correctAnswer'dan prefix'i kaldır (eğer varsa)
+        const cleanedCevap = soru.cevap.replace(/^[A-E]\)\s*/, "");
+
       setEditForm({
         soru: soru.soru,
-        cevap: soru.cevap,
-        secenekler: [...soru.secenekler],
+          cevap: cleanedCevap,
+          secenekler: paddedOptions.slice(0, 5),
         dogruSecenek,
         aciklama: soru.aciklama,
         zorluk: soru.zorluk,
@@ -358,10 +450,24 @@ export default function AdminSorularPage({
           .map((secenek) => secenek.trim())
           .filter((secenek) => secenek.length > 0);
 
+        // Options'ları "A)", "B)", "C)", "D)", "E)" prefix'leriyle Firebase'e gönder
+        const optionsWithPrefix = trimmedOptions.map((opt, index) => {
+          const prefix = String.fromCharCode(65 + index) + ") ";
+          // Eğer zaten prefix varsa kaldır, yoksa ekle
+          const cleanOpt = opt.replace(/^[A-E]\)\s*/, "");
+          return prefix + cleanOpt;
+        });
+
+        // CorrectAnswer'ı da prefix'li yap (seçilen seçeneğin prefix'li versiyonu)
+        const correctAnswerIndex = editForm.dogruSecenek;
+        const correctAnswerPrefix = String.fromCharCode(65 + correctAnswerIndex) + ") ";
+        const cleanCorrectAnswer = editForm.cevap.trim().replace(/^[A-E]\)\s*/, "");
+        const correctAnswerWithPrefix = correctAnswerPrefix + cleanCorrectAnswer;
+
         requestBody = {
           questionText: editForm.soru.trim(),
-          correctAnswer: editForm.cevap.trim(),
-          options: trimmedOptions,
+          correctAnswer: correctAnswerWithPrefix,
+          options: optionsWithPrefix,
           explanation: editForm.aciklama?.trim() || "",
           difficulty: editForm.zorluk,
           subject: editForm.konu?.trim() || config.defaultKonu,
@@ -448,7 +554,7 @@ export default function AdminSorularPage({
       setNewSoruForm({
         soru: "",
         cevap: "",
-        secenekler: ["", "", "", ""],
+        secenekler: ["", "", "", "", ""],
         dogruSecenek: 0,
         aciklama: "",
         zorluk: "orta",
@@ -509,6 +615,7 @@ export default function AdminSorularPage({
     try {
       setLoading(true);
       setError(null);
+      toast.info("Soru ekleniyor...", { autoClose: false });
       const token = await getValidToken();
 
       // Doğru-yanlış soruları için resimdeki modele göre sadece text ve correct gönder
@@ -517,6 +624,7 @@ export default function AdminSorularPage({
         requestBody = {
           text: trimmedSoru,
           correct: newSoruForm.dogruSecenek === 0 ? "Doğru" : "Yanlış",
+          subject: trimmedKonu,
         };
       } else if (denemeType === "boslukdoldurma") {
         requestBody = {
@@ -529,10 +637,24 @@ export default function AdminSorularPage({
         };
       } else {
         // Mevzuat, Coğrafya, Tarih, Genel için Firebase formatı
+        // Options'ları "A)", "B)", "C)", "D)", "E)" prefix'leriyle Firebase'e gönder
+        const optionsWithPrefix = filledSecenekler.map((opt, index) => {
+          const prefix = String.fromCharCode(65 + index) + ") ";
+          // Eğer zaten prefix varsa kaldır, yoksa ekle
+          const cleanOpt = opt.replace(/^[A-E]\)\s*/, "");
+          return prefix + cleanOpt;
+        });
+
+        // CorrectAnswer'ı da prefix'li yap (seçilen seçeneğin prefix'li versiyonu)
+        const correctAnswerIndex = newSoruForm.dogruSecenek;
+        const correctAnswerPrefix = String.fromCharCode(65 + correctAnswerIndex) + ") ";
+        const cleanCorrectAnswer = trimmedCevap.replace(/^[A-E]\)\s*/, "");
+        const correctAnswerWithPrefix = correctAnswerPrefix + cleanCorrectAnswer;
+
         requestBody = {
           questionText: trimmedSoru,
-          correctAnswer: trimmedCevap,
-          options: filledSecenekler,
+          correctAnswer: correctAnswerWithPrefix,
+          options: optionsWithPrefix,
           explanation: trimmedAciklama || "",
           difficulty: newSoruForm.zorluk,
           subject: trimmedKonu,
@@ -554,6 +676,8 @@ export default function AdminSorularPage({
       const data = await response.json();
 
       if (data.success) {
+        toast.dismiss(); // Yükleniyor toast'unu kapat
+        toast.success("Soru başarıyla eklendi!");
         await fetchSorular(); // Listeyi yenile
         setIsAddModalOpen(false);
         // Doğru-yanlış için seçenekleri otomatik doldur
@@ -579,11 +703,15 @@ export default function AdminSorularPage({
           });
         }
       } else {
+        toast.dismiss(); // Yükleniyor toast'unu kapat
         setError(data.error || "Soru eklenemedi");
+        toast.error(data.error || "Soru eklenemedi");
       }
     } catch (err) {
       console.error("Soru eklenirken hata:", err);
+      toast.dismiss(); // Yükleniyor toast'unu kapat
       setError("Soru eklenirken bir hata oluştu");
+      toast.error("Soru eklenirken bir hata oluştu");
     } finally {
       setLoading(false);
     }
@@ -642,9 +770,16 @@ export default function AdminSorularPage({
               konu: soru.konu || config.defaultKonu,
             };
 
+            // Options'lardan prefix'leri kaldır ve export et
             optionHeaders.forEach((header, index) => {
-              row[`secenek_${header}`] = soru.secenekler[index] || "";
+              const secenek = soru.secenekler[index] || "";
+              // Prefix'i kaldır (A), B), C), D), E), F) formatından)
+              const cleanSecenek = secenek.replace(/^[A-F]\)\s*/, "");
+              row[`secenek_${header}`] = cleanSecenek;
             });
+
+            // dogrucevap'tan da prefix'i kaldır
+            row.dogrucevap = row.dogrucevap.replace(/^[A-F]\)\s*/, "");
 
             return row;
           })
@@ -664,24 +799,52 @@ export default function AdminSorularPage({
             ),
           ];
     } else {
-      // Diğer deneme türleri için import formatına uygun: soru, dogrucevap (veya cevap), aciklama, zorluk, konu
-      // Not: Diğer türler için import kısmında özel bir format yok, bu yüzden genel format kullanıyoruz
+      // Mevzuat, Coğrafya, Tarih, Genel için import formatına uygun: soru, secenek_a, secenek_b, secenek_c, secenek_d, secenek_e, dogrucevap, aciklama, zorluk, konu
+      const optionHeaders = ["a", "b", "c", "d", "e"];
+
       exportRows = hasSorular
-        ? denemeData.sorular.map((soru) => ({
+        ? denemeData.sorular.map((soru) => {
+            const row: Record<string, string> = {
             soru: soru.soru || "",
             dogrucevap: soru.cevap || "",
             aciklama: soru.aciklama || "",
             zorluk: soru.zorluk || "orta",
             konu: soru.konu || config.defaultKonu,
-          }))
+            };
+
+            // Options'lardan prefix'leri kaldır ve export et
+            soru.secenekler.forEach((secenek: string, index: number) => {
+              if (index < optionHeaders.length) {
+                // Prefix'i kaldır (A), B), C), D), E) formatından)
+                const cleanSecenek = secenek.replace(/^[A-E]\)\s*/, "");
+                row[`secenek_${optionHeaders[index]}`] = cleanSecenek;
+              }
+            });
+
+            // Eğer 5'ten az seçenek varsa, boş string'lerle doldur
+            for (let i = soru.secenekler.length; i < optionHeaders.length; i++) {
+              row[`secenek_${optionHeaders[i]}`] = "";
+            }
+
+            // dogrucevap'tan da prefix'i kaldır
+            row.dogrucevap = row.dogrucevap.replace(/^[A-E]\)\s*/, "");
+
+            return row;
+          })
         : [
+            optionHeaders.reduce(
+              (acc, header) => ({
+                ...acc,
+                [`secenek_${header}`]: "",
+              }),
             {
               soru: "",
               dogrucevap: "",
               aciklama: "",
               zorluk: "",
               konu: config.defaultKonu,
-            },
+              }
+            ),
           ];
     }
 
@@ -711,14 +874,18 @@ export default function AdminSorularPage({
   const handleExcelImport = async (file: File) => {
     if (!file || !denemeId) return;
 
+    let loadingToastId: number | string | undefined;
     try {
       setImporting(true);
+      loadingToastId = toast.info("Sorular yükleniyor...", { autoClose: false });
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array" });
       const sheetName = workbook.SheetNames[0];
 
       if (!sheetName) {
+        if (loadingToastId) toast.dismiss(loadingToastId);
         toast.error("Excel dosyasında sayfa bulunamadı");
+        setImporting(false);
         return;
       }
 
@@ -873,23 +1040,56 @@ export default function AdminSorularPage({
             const hasAnswerInOptions = optionsFromRow.some(
               (option) => option.trim().toLowerCase() === lowerAnswer
             );
-            const finalOptions = hasAnswerInOptions
+            const allOptions = hasAnswerInOptions
               ? optionsFromRow
               : [...optionsFromRow, rawAnswer];
 
+            // Options'ları prefix'li yap
+            const finalOptions = allOptions.map((opt, index) => {
+              const prefix = String.fromCharCode(65 + index) + ") ";
+              const cleanOpt = opt.replace(/^[A-E]\)\s*/, "");
+              return prefix + cleanOpt;
+            });
+
+            // CorrectAnswer'ı da prefix'li yap
+            const correctAnswerIndex = allOptions.findIndex(
+              (opt) => opt.trim().toLowerCase() === lowerAnswer
+            );
+            const correctAnswerPrefix = correctAnswerIndex >= 0 
+              ? String.fromCharCode(65 + correctAnswerIndex) + ") "
+              : "A) ";
+            const cleanCorrectAnswer = rawAnswer.replace(/^[A-E]\)\s*/, "");
+            const correctAnswerWithPrefix = correctAnswerPrefix + cleanCorrectAnswer;
+
             requestBody = {
               questionText,
-              correctAnswer: rawAnswer,
+              correctAnswer: correctAnswerWithPrefix,
               options: finalOptions,
               explanation: explanation || "",
               difficulty: finalDifficulty,
               subject,
             };
           } else {
+            // Mevzuat, Coğrafya, Tarih, Genel için options'ları prefix'li yap
+            // Excel'den gelen seçenekleri al (eğer varsa)
+            const excelOptions = extractBoslukOptions(normalized);
+            const finalOptions = excelOptions.length > 0 
+              ? excelOptions.map((opt, index) => {
+                  const prefix = String.fromCharCode(65 + index) + ") ";
+                  const cleanOpt = opt.replace(/^[A-E]\)\s*/, "");
+                  return prefix + cleanOpt;
+                })
+              : ["A) Doğru", "B) Yanlış"];
+
+            // CorrectAnswer'ı da prefix'li yap
+            const correctAnswerPrefix = "A) ";
+            const cleanCorrectAnswer = rawAnswer.replace(/^[A-E]\)\s*/, "");
+            const correctAnswerWithPrefix = correctAnswerPrefix + cleanCorrectAnswer;
+
             requestBody = {
               questionText,
-              correctAnswer: rawAnswer || questionText,
-              options: ["Doğru", "Yanlış"],
+              correctAnswer: correctAnswerWithPrefix,
+              options: finalOptions,
               explanation: explanation || "",
               difficulty: finalDifficulty,
               subject,
@@ -920,6 +1120,8 @@ export default function AdminSorularPage({
         }
       }
 
+      toast.dismiss(loadingToastId); // Yükleniyor toast'unu kapat
+
       if (successCount > 0) {
         toast.success(`${successCount} soru başarıyla eklendi`);
         await fetchSorular(); // Listeyi yenile
@@ -934,6 +1136,7 @@ export default function AdminSorularPage({
       setShowExcelModal(false);
     } catch (err) {
       console.error("Excel içe aktarım hatası:", err);
+      toast.dismiss(loadingToastId); // Yükleniyor toast'unu kapat
       toast.error("Excel dosyası okunamadı");
     } finally {
       setImporting(false);

@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { Deneme, DenemeType, DENEME_API_ENDPOINTS } from "@/types/deneme";
 import LoadingSpinner from "./LoadingSpinner";
 import ConfirmModal from "./ConfirmModal";
+import Pagination from "./Pagination";
 import { toast } from "react-toastify";
 
 interface AdminDenemeTableProps {
@@ -31,23 +32,35 @@ export default function AdminDenemeTable({
   const [denemeToDelete, setDenemeToDelete] = useState<Deneme | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+
   const apiEndpoint = DENEME_API_ENDPOINTS[denemeType].list;
   const deleteEndpoint = DENEME_API_ENDPOINTS[denemeType].admin.delete;
 
   useEffect(() => {
     fetchDenemeler();
-  }, [denemeType]);
+  }, [denemeType, currentPage, pageSize]);
 
   const fetchDenemeler = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(apiEndpoint);
+      const url = `${apiEndpoint}?page=${currentPage}&pageSize=${pageSize}`;
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.success) {
         setDenemeler(data.data);
+        if (data.pagination) {
+          setTotal(data.pagination.total);
+        } else {
+          // Eski API formatı için fallback
+          setTotal(data.data.length);
+        }
       } else {
         const errorMsg = data.error || "Denemeler yüklenemedi";
         const details = data.details ? ` (${data.details})` : "";
@@ -62,6 +75,15 @@ export default function AdminDenemeTable({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Sayfa boyutu değiştiğinde ilk sayfaya dön
   };
 
   const handleDeleteClick = (deneme: Deneme) => {
@@ -186,7 +208,7 @@ export default function AdminDenemeTable({
         </div>
       )}
 
-      {denemeler.length === 0 ? (
+      {denemeler.length === 0 && !loading ? (
         <div className="text-center py-5">
           <i className="bi bi-journal-text display-1 text-muted"></i>
           <h3 className="mt-3 text-muted">Henüz deneme bulunmuyor</h3>
@@ -201,6 +223,7 @@ export default function AdminDenemeTable({
           )}
         </div>
       ) : (
+        <>
         <div className="table-responsive">
           <table className="table table-striped table-hover">
             <thead className="table-dark">
@@ -288,6 +311,22 @@ export default function AdminDenemeTable({
             </tbody>
           </table>
         </div>
+
+          {/* Pagination */}
+          {total > 0 && (
+            <div className="mt-4 pt-3 border-top">
+              <Pagination
+                currentPage={currentPage}
+                pageSize={pageSize}
+                total={total}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+                showPageSizeSelector={true}
+                pageSizeOptions={[10, 20, 50, 100]}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* Silme Onay Modalı */}

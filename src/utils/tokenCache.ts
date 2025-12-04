@@ -29,9 +29,14 @@ export async function getValidToken(): Promise<string> {
     });
   }
 
+  // auth.currentUser hala null olabilir, tekrar kontrol et
+  if (!auth.currentUser) {
+    throw new Error("Kullanıcı oturumu bulunamadı. Lütfen tekrar giriş yapın.");
+  }
+
   try {
     // Önce cached token dene (false = cached)
-    const token = await auth.currentUser!.getIdToken(false);
+    const token = await auth.currentUser.getIdToken(false);
 
     // Cache'e kaydet (45 dakika geçerli)
     tokenCache = {
@@ -42,7 +47,12 @@ export async function getValidToken(): Promise<string> {
     return token;
   } catch (error) {
     // Cached token başarısızsa fresh token al
-    const freshToken = await auth.currentUser!.getIdToken(true);
+    // auth.currentUser hala null olabilir, tekrar kontrol et
+    if (!auth.currentUser) {
+      throw new Error("Kullanıcı oturumu bulunamadı. Lütfen tekrar giriş yapın.");
+    }
+    
+    const freshToken = await auth.currentUser.getIdToken(true);
     tokenCache = {
       token: freshToken,
       expiryTime: now + 45 * 60 * 1000,

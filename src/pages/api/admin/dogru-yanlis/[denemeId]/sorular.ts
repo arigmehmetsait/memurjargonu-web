@@ -136,6 +136,46 @@ export default async function handler(
       // Soruyu ekle
       await denemeDoc.ref.collection(targetCollection).doc(soruId).set(soruData);
 
+      // _metadata dokümanını sil (eğer varsa)
+      const metadataRef = denemeDoc.ref.collection(targetCollection).doc("_metadata");
+      const metadataDoc = await metadataRef.get();
+      if (metadataDoc.exists) {
+        await metadataRef.delete();
+      }
+
+      // Konuyu dogruyanlisTopics koleksiyonuna kaydet
+      // Subject'i doküman adı olarak kullan, koleksiyon adını topics array'ine ekle
+      const mainTopic = req.body.subject || targetCollection || "Genel";
+      const subTopic = targetCollection;
+      
+      if (mainTopic && mainTopic.trim()) {
+        try {
+          const topicsCollectionRef = adminDb.collection("dogruyanlisTopics");
+          const topicDocRef = topicsCollectionRef.doc(mainTopic.trim());
+          const topicDoc = await topicDocRef.get();
+
+          if (topicDoc.exists) {
+            // Doküman varsa, topics array'ini güncelle
+            const existingData = topicDoc.data();
+            const existingTopics = existingData?.topics || [];
+            // Eğer alt konu (koleksiyon adı) zaten yoksa ekle
+            if (subTopic && subTopic.trim() && !existingTopics.includes(subTopic.trim())) {
+              await topicDocRef.update({
+                topics: [...existingTopics, subTopic.trim()],
+              });
+            }
+          } else {
+            // Doküman yoksa oluştur
+            await topicDocRef.set({
+              topics: subTopic && subTopic.trim() ? [subTopic.trim()] : [],
+            });
+          }
+        } catch (topicError) {
+          // Konu kaydetme hatası soru eklemeyi engellemesin
+          console.error("Konu kaydetme hatası:", topicError);
+        }
+      }
+
       // Deneme soru sayısını güncelle
       await denemeDoc.ref.update({
         soruSayisi: yeniSoruNumarasi,

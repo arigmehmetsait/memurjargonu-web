@@ -52,9 +52,9 @@ export default async function handler(
           data: questions,
         });
 
-      case "POST":
+      case "POST": {
         // Yeni soru ekle
-        const { questionKey, answer, options } = req.body;
+        const { questionKey, questionText, answer, options } = req.body;
 
         if (!questionKey || !questionKey.trim()) {
           return res.status(400).json({ error: "Soru anahtarı zorunludur" });
@@ -66,10 +66,14 @@ export default async function handler(
           });
         }
 
-        const newQuestion = {
+        const newQuestion: Record<string, any> = {
           answer: answer?.trim() || "",
           options: options.map((opt: any) => String(opt).trim()),
         };
+
+        if (questionText !== undefined) {
+          newQuestion.questionText = questionText.trim();
+        }
 
         await docRef.update({
           [`questions.${questionKey.trim()}`]: newQuestion,
@@ -82,10 +86,16 @@ export default async function handler(
             [questionKey.trim()]: newQuestion,
           },
         });
+      }
 
-      case "PUT":
+      case "PUT": {
         // Soru güncelle
-        const { updateQuestionKey, updateAnswer, updateOptions } = req.body;
+        const {
+          updateQuestionKey,
+          questionText,
+          updateAnswer,
+          updateOptions,
+        } = req.body;
 
         if (!updateQuestionKey || !updateQuestionKey.trim()) {
           return res.status(400).json({ error: "Soru anahtarı zorunludur" });
@@ -95,7 +105,14 @@ export default async function handler(
           return res.status(404).json({ error: "Soru bulunamadı" });
         }
 
-        const updatedQuestion: Record<string, any> = {};
+        const currentQuestion = questions[updateQuestionKey.trim()];
+        const updatedQuestion: Record<string, any> = {
+          ...currentQuestion,
+        };
+
+        if (questionText !== undefined) {
+          updatedQuestion.questionText = questionText.trim();
+        }
 
         if (updateAnswer !== undefined) {
           updatedQuestion.answer = updateAnswer.trim();
@@ -113,10 +130,7 @@ export default async function handler(
         }
 
         await docRef.update({
-          [`questions.${updateQuestionKey.trim()}`]: {
-            ...questions[updateQuestionKey.trim()],
-            ...updatedQuestion,
-          },
+          [`questions.${updateQuestionKey.trim()}`]: updatedQuestion,
           updatedAt: new Date(),
         });
 
@@ -124,8 +138,9 @@ export default async function handler(
           success: true,
           message: "Soru güncellendi",
         });
+      }
 
-      case "DELETE":
+      case "DELETE": {
         // Soru sil
         const { deleteQuestionKey } = req.body;
 
@@ -145,6 +160,7 @@ export default async function handler(
           success: true,
           message: "Soru silindi",
         });
+      }
 
       default:
         return res.status(405).json({ error: "Method not allowed" });

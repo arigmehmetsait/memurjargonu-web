@@ -54,11 +54,32 @@ export default async function handler(
 
     // Custom claims güncelle (KPSS Full paket için)
     if (packageType === PackageType.KPSS_FULL) {
-      await adminAuth.setCustomUserClaims(userId, {
+      // Mevcut claims'leri al ve koru (özellikle admin claim'ini)
+      // ÖNEMLİ: userRecord'u paket silme işleminden ÖNCE alıyoruz
+      // çünkü paket silme işlemi sırasında custom claims değişebilir
+      const userRecord = await adminAuth.getUser(userId);
+      const existingClaims = userRecord.customClaims || {};
+      
+      // Admin claim'ini özellikle koru
+      const newClaims = {
+        ...existingClaims, // Tüm mevcut claims'leri koru
         premium: false,
         premiumExp: Date.now(),
-      });
-      await adminAuth.revokeRefreshTokens(userId);
+      };
+      
+      // Eğer kullanıcı seed listesindeyse, admin claim'ini zorunlu olarak ekle
+      const seedUids = (process.env.ADMIN_SEED_UIDS || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      
+      if (seedUids.includes(userId)) {
+        newClaims.admin = true;
+      }
+      
+      await adminAuth.setCustomUserClaims(userId, newClaims);
+      // Not: revokeRefreshTokens çağrılmıyor çünkü kullanıcıyı otomatik çıkış yaptırır
+      // Custom claims değişiklikleri bir sonraki token yenilemede otomatik yansıyacak
     }
 
     res.status(200).json({

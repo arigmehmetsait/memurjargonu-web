@@ -1,17 +1,37 @@
 "use client";
 import { useEffect, useState } from "react";
-import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, where, doc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import type { Plan } from "@/types/plan";
 import Link from "next/link";
+import Header from "@/components/Header";
+import { useCart } from "@/context/CartContext";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [orderId, setOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState<string | null>(null);
-  console.log("plans", plans);
+  const [ownedPackages, setOwnedPackages] = useState<Record<string, boolean>>({});
+  const { addToCart, isInCart } = useCart();
+
+  // Fetch user's owned packages
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setOwnedPackages(userData?.ownedPackages || {});
+          }
+        } catch (err) {
+          console.error("Kullanıcı paketleri yüklenirken hata:", err);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   useEffect(() => {
     const run = async () => {
       try {
@@ -23,7 +43,7 @@ export default function PlansPage() {
         const snap = await getDocs(q);
         setPlans(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
       } catch (err) {
-        setMsg(`Planlar yüklenirken hata: ${String(err)}`);
+        console.error(`Planlar yüklenirken hata: ${String(err)}`);
       } finally {
         setLoading(false);
       }
@@ -31,78 +51,47 @@ export default function PlansPage() {
     run();
   }, []);
 
-  const handleSelect = async (plan: Plan) => {
-    try {
-      setMsg("Ödeme başlatılıyor…");
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) {
-        setMsg("Giriş yapmalısın.");
-        return;
-      }
-
-      const r = await fetch("/api/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ planId: plan.id }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data?.error || "Checkout failed");
-
-      setMsg(
-        `Sipariş oluşturuldu ✅ (orderId: ${data.orderId}). ${
-          data.message || ""
-        }`
-      );
-      setOrderId(data.orderId);
-    } catch (e: any) {
-      setMsg(`Hata: ${e.message ?? String(e)}`);
-    }
+  const handleAddToCart = (plan: Plan) => {
+    addToCart(plan);
   };
 
-  const simulatePaid = async () => {
-    if (!orderId) return;
-    try {
-      setProcessing("payment");
-      setMsg("Ödeme onaylanıyor…");
-      const r = await fetch("/api/webhooks/mock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data?.error || "Webhook failed");
+  const isOwned = (planKey: string) => {
+    return ownedPackages[planKey] === true;
+  };
 
-      await auth.currentUser?.getIdToken(true); // claim'leri yenile
-      setMsg("Ödeme başarılı ✅ Premium açıldı (claim yenilendi).");
-    } catch (e: any) {
-      setMsg(`Webhook hata: ${e.message ?? String(e)}`);
-    } finally {
-      setProcessing(null);
-    }
+  const calculateMonthlyPrice = (price: number, periodMonths: number): number => {
+    if (periodMonths <= 0) return price;
+    return Math.round((price / periodMonths) * 100) / 100;
   };
 
   return (
     <div className="min-vh-100 bg-light">
-      {/* Header */}
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div className="container">
-          <Link href="/" className="navbar-brand">
-            <i className="bi bi-mortarboard-fill me-2"></i>
-            MEMUR JARGONU
-          </Link>
-        </div>
-      </nav>
+      <Header />
 
       {/* Hero Section */}
-      <section className="py-5 bg-primary text-white">
-        <div className="container">
+      <section 
+        className="py-5 text-white position-relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, color-mix(in srgb, var(--bs-primary) 65%, white 35%) 0%, color-mix(in srgb, var(--bs-info) 65%, white 35%) 100%)',
+          minHeight: '280px',
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
+        <div 
+          className="position-absolute top-0 start-0 w-100 h-100"
+          style={{
+            background: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%)',
+            pointerEvents: 'none'
+          }}
+        />
+        <div className="container position-relative">
           <div className="row text-center">
             <div className="col-lg-8 mx-auto">
-              <h1 className="display-4 fw-bold mb-3">Paketler</h1>
-              <p className="lead mb-0">
+              <h1 className="display-3 fw-bold mb-4" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+                Paketler
+              </h1>
+              <p className="lead fs-4 mb-0" style={{ textShadow: '0 1px 5px rgba(0,0,0,0.2)' }}>
                 KPSS hazırlığınız için en uygun paketi seçin ve başarıya giden
                 yolda ilk adımı atın
               </p>
@@ -112,14 +101,23 @@ export default function PlansPage() {
       </section>
 
       {/* Plans Section */}
-      <section className="py-5">
+      <section className="py-5" style={{ background: 'linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%)' }}>
         <div className="container">
           {loading ? (
             <div className="text-center py-5">
-              <div className="spinner-border text-primary" role="status">
+              <div 
+                className="spinner-border" 
+                role="status" 
+                style={{ 
+                  width: '3rem', 
+                  height: '3rem',
+                  borderColor: '#3b82f6',
+                  borderRightColor: 'transparent'
+                }}
+              >
                 <span className="visually-hidden">Yükleniyor...</span>
               </div>
-              <p className="mt-3">Paketler yükleniyor...</p>
+              <p className="mt-3 fs-5 text-muted">Paketler yükleniyor...</p>
             </div>
           ) : (
             <div className="row g-4 justify-content-center">
@@ -129,49 +127,177 @@ export default function PlansPage() {
                     className={`card pricing-card h-100 ${
                       index === 1 ? "featured" : ""
                     }`}
+                    style={{
+                      borderRadius: '20px',
+                      border: index === 1 ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                      boxShadow: index === 1 
+                        ? '0 10px 40px rgba(59, 130, 246, 0.2)' 
+                        : '0 4px 20px rgba(0, 0, 0, 0.08)',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      overflow: 'hidden',
+                      position: 'relative'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (index !== 1) {
+                        e.currentTarget.style.transform = 'translateY(-8px)';
+                        e.currentTarget.style.boxShadow = '0 12px 40px rgba(59, 130, 246, 0.15)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (index !== 1) {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.08)';
+                      }
+                    }}
                   >
-                    <div className="card-body p-4 text-center">
-                      <h3 className="card-title fw-bold mb-3">{plan.name}</h3>
+                    {index === 1 && (
+                      <div 
+                        className="position-absolute top-0 start-0 w-100 text-center py-2"
+                        style={{
+                          background: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)',
+                          color: 'white',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          letterSpacing: '0.5px'
+                        }}
+                      >
+                        <i className="bi bi-star-fill me-2"></i>
+                        EN POPÜLER
+                      </div>
+                    )}
+                    <div className="card-body p-5 text-center" style={{ marginTop: index === 1 ? '40px' : '0' }}>
+                      <div className="d-flex flex-column align-items-center mb-4">
+                        <h3 className="card-title fw-bold mb-3" style={{ fontSize: '1.75rem', color: '#1e293b' }}>
+                          {plan.name}
+                        </h3>
+                        {isOwned(plan.key) && (
+                          <span 
+                            className="badge px-3 py-2"
+                            style={{
+                              background: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
+                              color: 'white',
+                              borderRadius: '20px',
+                              fontSize: '0.875rem',
+                              fontWeight: '600'
+                            }}
+                          >
+                            <i className="bi bi-check-circle me-1"></i>
+                            Sahipsiniz
+                          </span>
+                        )}
+                      </div>
 
-                      <div className="mb-4">
-                        <span className="display-4 fw-bold text-primary">
-                          {plan.price}
-                        </span>
-                        <span className="text-muted"> {plan.currency}</span>
-                        <div className="text-muted small">
-                          {plan.periodMonths} ay
+                      <div className="mb-4 pb-3" style={{ borderBottom: '2px solid #f1f5f9' }}>
+                        <div className="d-flex align-items-baseline justify-content-center">
+                          <span 
+                            className="fw-bold"
+                            style={{ 
+                              fontSize: '3rem', 
+                              color: '#3b82f6',
+                              lineHeight: '1'
+                            }}
+                          >
+                            {plan.price}
+                          </span>
+                          <span className="text-muted ms-2" style={{ fontSize: '1.25rem' }}>
+                            {plan.currency}
+                          </span>
+                        </div>
+                        {plan.periodMonths > 1 && (
+                          <div 
+                            className="mt-2"
+                            style={{ 
+                              fontSize: '0.9rem', 
+                              fontWeight: '500',
+                              color: '#10b981'
+                            }}
+                          >
+                            <i className="bi bi-calendar-check me-1"></i>
+                            Aylık sadece {calculateMonthlyPrice(plan.price, plan.periodMonths)} {plan.currency}
+                          </div>
+                        )}
+                        <div 
+                          className="text-muted mt-1"
+                          style={{ fontSize: '0.95rem', fontWeight: '500' }}
+                        >
+                          {plan.periodMonths} ay erişim
                         </div>
                       </div>
 
                       {plan.features && plan.features.length > 0 && (
-                        <ul className="list-unstyled mb-4 text-muted">
+                        <ul className="list-unstyled mb-4 text-start">
                           {plan.features.map((feature: string, i: number) => (
-                            <li key={i} className="mb-2">
-                              <i className="bi bi-check-circle-fill text-success me-2"></i>
-                              {feature}
+                            <li 
+                              key={i} 
+                              className="mb-3 d-flex align-items-start"
+                              style={{ color: '#475569' }}
+                            >
+                              <i 
+                                className="bi bi-check-circle-fill me-3 mt-1"
+                                style={{ 
+                                  color: '#34d399',
+                                  fontSize: '1.1rem',
+                                  flexShrink: 0
+                                }}
+                              ></i>
+                              <span style={{ fontSize: '0.95rem', lineHeight: '1.6' }}>
+                                {feature}
+                              </span>
                             </li>
                           ))}
                         </ul>
                       )}
 
                       <button
-                        className="btn btn-primary btn-lg w-100"
-                        onClick={() => handleSelect(plan)}
-                        disabled={true}
+                        className={`btn btn-lg w-100 mt-4 ${
+                          isOwned(plan.key)
+                            ? "btn-secondary"
+                            : isInCart(plan.id)
+                            ? "btn-success"
+                            : index === 1
+                            ? "btn-primary"
+                            : "btn-outline-primary"
+                        }`}
+                        onClick={() => handleAddToCart(plan)}
+                        disabled={isOwned(plan.key) || isInCart(plan.id)}
+                        style={{
+                          borderRadius: '12px',
+                          padding: '0.875rem 1.5rem',
+                          fontWeight: '600',
+                          fontSize: '1rem',
+                          border: 'none',
+                          transition: 'all 0.3s ease',
+                          ...(index === 1 && !isOwned(plan.key) && !isInCart(plan.id) && {
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)',
+                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+                          })
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isOwned(plan.key) && !isInCart(plan.id)) {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            if (index === 1) {
+                              e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
+                            }
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }}
                       >
-                        {processing === plan.id ? (
+                        {isOwned(plan.key) ? (
                           <>
-                            <span
-                              className="spinner-border spinner-border-sm me-2"
-                              role="status"
-                              aria-hidden="true"
-                            ></span>
-                            İşleniyor...
+                            <i className="bi bi-check-circle-fill me-2"></i>
+                            Zaten Sahipsiniz
+                          </>
+                        ) : isInCart(plan.id) ? (
+                          <>
+                            <i className="bi bi-check-lg me-2"></i>
+                            Sepette
                           </>
                         ) : (
                           <>
                             <i className="bi bi-cart-plus me-2"></i>
-                            Satın Al
+                            Sepete Ekle
                           </>
                         )}
                       </button>
@@ -182,117 +308,159 @@ export default function PlansPage() {
             </div>
           )}
 
-          {/* Message */}
-          {msg && (
-            <div className="row justify-content-center mt-4">
-              <div className="col-lg-8">
-                <div
-                  className={`alert ${
-                    msg.includes("✅") ? "alert-success" : "alert-danger"
-                  } alert-dismissible fade show`}
-                  role="alert"
-                >
-                  <i
-                    className={`bi ${
-                      msg.includes("✅")
-                        ? "bi-check-circle"
-                        : "bi-exclamation-triangle"
-                    } me-2`}
-                  ></i>
-                  {msg}
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={() => setMsg(null)}
-                  ></button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Test Payment Section */}
-          {orderId && (
-            <div className="row justify-content-center mt-4">
-              <div className="col-lg-8">
-                <div className="card border-warning">
-                  <div className="card-header bg-warning text-dark">
-                    <h5 className="mb-0">
-                      <i className="bi bi-flask me-2"></i>
-                      Test Ödeme Sistemi
-                    </h5>
-                  </div>
-                  <div className="card-body">
-                    <p className="text-muted mb-3">
-                      Geliştirme amaçlı test ödeme sistemi. Gerçek ödeme
-                      yapmadan premium üyeliği aktifleştirmek için kullanın.
-                    </p>
-                    <div className="d-flex gap-3 align-items-center">
-                      <button
-                        className="btn btn-warning"
-                        onClick={simulatePaid}
-                        disabled={processing === "payment"}
-                      >
-                        {processing === "payment" ? (
-                          <>
-                            <span
-                              className="spinner-border spinner-border-sm me-2"
-                              role="status"
-                              aria-hidden="true"
-                            ></span>
-                            İşleniyor...
-                          </>
-                        ) : (
-                          <>
-                            <i className="bi bi-credit-card me-2"></i>
-                            Ödemeyi Başarılı Yap
-                          </>
-                        )}
-                      </button>
-                      <small className="text-white">
-                        Order ID: <code>{orderId}</code>
-                      </small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Features Section */}
-          <div className="row mt-5">
+          <div className="row mt-5 pt-5">
             <div className="col-12">
-              <div className="text-center mb-4">
-                <h3 className="fw-bold text-dark">Tüm Paketlerde Dahil</h3>
-                <p className="text-muted">Premium üyelik avantajları</p>
+              <div className="text-center mb-5">
+                <h2 className="fw-bold mb-3" style={{ fontSize: '2rem', color: '#1e293b' }}>
+                  Tüm Paketlerde Dahil
+                </h2>
+                <p className="text-muted fs-5">Premium üyelik avantajları</p>
               </div>
 
               <div className="row g-4">
                 <div className="col-md-3 col-6">
-                  <div className="text-center">
-                    <i className="bi bi-map text-primary display-6 mb-3"></i>
-                    <h6 className="text-dark">Güncel Haritalar</h6>
-                    <small className="text-muted">Coğrafya haritaları</small>
+                  <div 
+                    className="text-center p-4 rounded-4"
+                    style={{
+                      background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                      border: '1px solid #e2e8f0',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-5px)';
+                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.15)';
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  >
+                    <div 
+                      className="mb-3 mx-auto d-flex align-items-center justify-content-center"
+                      style={{
+                        width: '70px',
+                        height: '70px',
+                        background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
+                        borderRadius: '16px',
+                        color: 'white'
+                      }}
+                    >
+                      <i className="bi bi-map" style={{ fontSize: '2rem' }}></i>
+                    </div>
+                    <h6 className="text-dark fw-bold mb-2" style={{ fontSize: '1.1rem' }}>Güncel Haritalar</h6>
+                    <small className="text-muted" style={{ fontSize: '0.9rem' }}>Coğrafya haritaları</small>
                   </div>
                 </div>
                 <div className="col-md-3 col-6">
-                  <div className="text-center">
-                    <i className="bi bi-play-circle text-primary display-6 mb-3"></i>
-                    <h6 className="text-dark">Video Çözümler</h6>
-                    <small className="text-muted">Uzman anlatımlar</small>
+                  <div 
+                    className="text-center p-4 rounded-4"
+                    style={{
+                      background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                      border: '1px solid #e2e8f0',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-5px)';
+                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(52, 211, 153, 0.15)';
+                      e.currentTarget.style.borderColor = '#34d399';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  >
+                    <div 
+                      className="mb-3 mx-auto d-flex align-items-center justify-content-center"
+                      style={{
+                        width: '70px',
+                        height: '70px',
+                        background: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
+                        borderRadius: '16px',
+                        color: 'white'
+                      }}
+                    >
+                      <i className="bi bi-play-circle" style={{ fontSize: '2rem' }}></i>
+                    </div>
+                    <h6 className="text-dark fw-bold mb-2" style={{ fontSize: '1.1rem' }}>Video Çözümler</h6>
+                    <small className="text-muted" style={{ fontSize: '0.9rem' }}>Uzman anlatımlar</small>
                   </div>
                 </div>
                 <div className="col-md-3 col-6">
-                  <div className="text-center">
-                    <i className="bi bi-people text-primary display-6 mb-3"></i>
-                    <h6 className="text-dark">Aktif Forum</h6>
-                    <small className="text-muted">Topluluk desteği</small>
+                  <div 
+                    className="text-center p-4 rounded-4"
+                    style={{
+                      background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                      border: '1px solid #e2e8f0',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-5px)';
+                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.15)';
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  >
+                    <div 
+                      className="mb-3 mx-auto d-flex align-items-center justify-content-center"
+                      style={{
+                        width: '70px',
+                        height: '70px',
+                        background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
+                        borderRadius: '16px',
+                        color: 'white'
+                      }}
+                    >
+                      <i className="bi bi-people" style={{ fontSize: '2rem' }}></i>
+                    </div>
+                    <h6 className="text-dark fw-bold mb-2" style={{ fontSize: '1.1rem' }}>Aktif Forum</h6>
+                    <small className="text-muted" style={{ fontSize: '0.9rem' }}>Topluluk desteği</small>
                   </div>
                 </div>
                 <div className="col-md-3 col-6">
-                  <div className="text-center">
-                    <i className="bi bi-headset text-primary display-6 mb-3"></i>
-                    <h6 className="text-dark">7/24 Destek</h6>
-                    <small className="text-muted">Müşteri hizmetleri</small>
+                  <div 
+                    className="text-center p-4 rounded-4"
+                    style={{
+                      background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                      border: '1px solid #e2e8f0',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-5px)';
+                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(52, 211, 153, 0.15)';
+                      e.currentTarget.style.borderColor = '#34d399';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  >
+                    <div 
+                      className="mb-3 mx-auto d-flex align-items-center justify-content-center"
+                      style={{
+                        width: '70px',
+                        height: '70px',
+                        background: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
+                        borderRadius: '16px',
+                        color: 'white'
+                      }}
+                    >
+                      <i className="bi bi-headset" style={{ fontSize: '2rem' }}></i>
+                    </div>
+                    <h6 className="text-dark fw-bold mb-2" style={{ fontSize: '1.1rem' }}>7/24 Destek</h6>
+                    <small className="text-muted" style={{ fontSize: '0.9rem' }}>Müşteri hizmetleri</small>
                   </div>
                 </div>
               </div>
