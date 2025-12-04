@@ -78,7 +78,12 @@ export default async function handler(
         Date.now();
 
       // Admin claim'ini özellikle koru
-      const newClaims = {
+      const newClaims: {
+        premium: boolean | null;
+        premiumExp: number;
+        admin?: boolean;
+        [key: string]: any;
+      } = {
         ...existingClaims, // Tüm mevcut claims'leri koru
         premium: isKpssFullActive,
         premiumExp: expMs,
