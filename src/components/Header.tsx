@@ -19,7 +19,7 @@ export default function Header({
   const [user, setUser] = useState<User | null>(null);
   const [claims, setClaims] = useState<Claims>({});
   const [loading, setLoading] = useState(true);
-  const { cart } = useCart();
+  const { cart, clearCart } = useCart();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -43,6 +43,11 @@ export default function Header({
 
   const handleLogout = async () => {
     try {
+      // Sepeti temizle
+      clearCart();
+      // localStorage'dan da sepeti temizle
+      localStorage.removeItem("cart");
+      // Çıkış yap
       await signOut(auth);
     } catch (error) {
       console.error("Logout error:", error);
@@ -135,14 +140,25 @@ export default function Header({
                 Paketler
               </Link>
             </li>
+            <li className="nav-item">
+              <Link href="/contact" className="nav-link">
+                İletişim
+              </Link>
+            </li>
           </ul>
 
           <ul className="navbar-nav align-items-center">
             <li className="nav-item me-3">
               <Link href="/cart" className="nav-link position-relative">
-                <i className="bi bi-cart-fill" style={{ fontSize: "1.2rem" }}></i>
+                <i
+                  className="bi bi-cart-fill"
+                  style={{ fontSize: "1.2rem" }}
+                ></i>
                 {cart.length > 0 && (
-                  <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{ fontSize: "0.7rem" }}>
+                  <span
+                    className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                    style={{ fontSize: "0.7rem" }}
+                  >
                     {cart.length}
                   </span>
                 )}
