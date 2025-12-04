@@ -61,7 +61,12 @@ export default async function handler(
       const existingClaims = userRecord.customClaims || {};
       
       // Admin claim'ini özellikle koru
-      const newClaims = {
+      const newClaims: {
+        premium: boolean | null;
+        premiumExp: number;
+        admin?: boolean;
+        [key: string]: any;
+      } = {
         ...existingClaims, // Tüm mevcut claims'leri koru
         premium: false,
         premiumExp: Date.now(),
