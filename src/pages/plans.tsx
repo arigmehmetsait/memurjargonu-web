@@ -1,6 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { collection, getDocs, orderBy, query, where, doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  orderBy,
+  query,
+  where,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import type { Plan } from "@/types/plan";
 import Link from "next/link";
@@ -11,7 +19,9 @@ import { onAuthStateChanged } from "firebase/auth";
 export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [ownedPackages, setOwnedPackages] = useState<Record<string, boolean>>({});
+  const [ownedPackages, setOwnedPackages] = useState<Record<string, boolean>>(
+    {}
+  );
   const { addToCart, isInCart } = useCart();
 
   // Fetch user's owned packages
@@ -59,7 +69,10 @@ export default function PlansPage() {
     return ownedPackages[planKey] === true;
   };
 
-  const calculateMonthlyPrice = (price: number, periodMonths: number): number => {
+  const calculateMonthlyPrice = (
+    price: number,
+    periodMonths: number
+  ): number => {
     if (periodMonths <= 0) return price;
     return Math.round((price / periodMonths) * 100) / 100;
   };
@@ -69,29 +82,37 @@ export default function PlansPage() {
       <Header />
 
       {/* Hero Section */}
-      <section 
+      <section
         className="py-5 text-white position-relative overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, color-mix(in srgb, var(--bs-primary) 65%, white 35%) 0%, color-mix(in srgb, var(--bs-info) 65%, white 35%) 100%)',
-          minHeight: '280px',
-          display: 'flex',
-          alignItems: 'center'
+          background:
+            "linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-info) 100%)",
+          minHeight: "280px",
+          display: "flex",
+          alignItems: "center",
         }}
       >
-        <div 
+        <div
           className="position-absolute top-0 start-0 w-100 h-100"
           style={{
-            background: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%)',
-            pointerEvents: 'none'
+            background:
+              "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.22) 0%, rgba(59,130,246,0.12) 40%, transparent 70%), radial-gradient(circle at 80% 80%, rgba(0,227,255,0.15) 0%, rgba(59,130,246,0.13) 45%, transparent 75%)",
+            pointerEvents: "none",
           }}
         />
         <div className="container position-relative">
           <div className="row text-center">
             <div className="col-lg-8 mx-auto">
-              <h1 className="display-3 fw-bold mb-4" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>
+              <h1
+                className="display-3 fw-bold mb-4"
+                style={{ textShadow: "0 2px 10px rgba(0,0,0,0.2)" }}
+              >
                 Paketler
               </h1>
-              <p className="lead fs-4 mb-0" style={{ textShadow: '0 1px 5px rgba(0,0,0,0.2)' }}>
+              <p
+                className="lead fs-4 mb-0"
+                style={{ textShadow: "0 1px 5px rgba(0,0,0,0.2)" }}
+              >
                 KPSS hazırlığınız için en uygun paketi seçin ve başarıya giden
                 yolda ilk adımı atın
               </p>
@@ -101,18 +122,23 @@ export default function PlansPage() {
       </section>
 
       {/* Plans Section */}
-      <section className="py-5" style={{ background: 'linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%)' }}>
+      <section
+        className="py-5"
+        style={{
+          background: "linear-gradient(to bottom, #f8fafc 0%, #ffffff 100%)",
+        }}
+      >
         <div className="container">
           {loading ? (
             <div className="text-center py-5">
-              <div 
-                className="spinner-border" 
-                role="status" 
-                style={{ 
-                  width: '3rem', 
-                  height: '3rem',
-                  borderColor: '#3b82f6',
-                  borderRightColor: 'transparent'
+              <div
+                className="spinner-border"
+                role="status"
+                style={{
+                  width: "3rem",
+                  height: "3rem",
+                  borderColor: "#3b82f6",
+                  borderRightColor: "transparent",
                 }}
               >
                 <span className="visually-hidden">Yükleniyor...</span>
@@ -128,57 +154,69 @@ export default function PlansPage() {
                       index === 1 ? "featured" : ""
                     }`}
                     style={{
-                      borderRadius: '20px',
-                      border: index === 1 ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                      boxShadow: index === 1 
-                        ? '0 10px 40px rgba(59, 130, 246, 0.2)' 
-                        : '0 4px 20px rgba(0, 0, 0, 0.08)',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      overflow: 'hidden',
-                      position: 'relative'
+                      borderRadius: "20px",
+                      border:
+                        index === 1 ? "2px solid #3b82f6" : "1px solid #e2e8f0",
+                      boxShadow:
+                        index === 1
+                          ? "0 10px 40px rgba(59, 130, 246, 0.2)"
+                          : "0 4px 20px rgba(0, 0, 0, 0.08)",
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                      overflow: "hidden",
+                      position: "relative",
                     }}
                     onMouseEnter={(e) => {
                       if (index !== 1) {
-                        e.currentTarget.style.transform = 'translateY(-8px)';
-                        e.currentTarget.style.boxShadow = '0 12px 40px rgba(59, 130, 246, 0.15)';
+                        e.currentTarget.style.transform = "translateY(-8px)";
+                        e.currentTarget.style.boxShadow =
+                          "0 12px 40px rgba(59, 130, 246, 0.15)";
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (index !== 1) {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.08)';
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow =
+                          "0 4px 20px rgba(0, 0, 0, 0.08)";
                       }
                     }}
                   >
                     {index === 1 && (
-                      <div 
+                      <div
                         className="position-absolute top-0 start-0 w-100 text-center py-2"
                         style={{
-                          background: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)',
-                          color: 'white',
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                          letterSpacing: '0.5px'
+                          background:
+                            "linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)",
+                          color: "white",
+                          fontSize: "0.875rem",
+                          fontWeight: "600",
+                          letterSpacing: "0.5px",
                         }}
                       >
                         <i className="bi bi-star-fill me-2"></i>
                         EN POPÜLER
                       </div>
                     )}
-                    <div className="card-body p-5 text-center" style={{ marginTop: index === 1 ? '40px' : '0' }}>
+                    <div
+                      className="card-body p-5 text-center"
+                      style={{ marginTop: index === 1 ? "40px" : "0" }}
+                    >
                       <div className="d-flex flex-column align-items-center mb-4">
-                        <h3 className="card-title fw-bold mb-3" style={{ fontSize: '1.75rem', color: '#1e293b' }}>
+                        <h3
+                          className="card-title fw-bold mb-3"
+                          style={{ fontSize: "1.75rem", color: "#1e293b" }}
+                        >
                           {plan.name}
                         </h3>
                         {isOwned(plan.key) && (
-                          <span 
+                          <span
                             className="badge px-3 py-2"
                             style={{
-                              background: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
-                              color: 'white',
-                              borderRadius: '20px',
-                              fontSize: '0.875rem',
-                              fontWeight: '600'
+                              background:
+                                "linear-gradient(135deg, #34d399 0%, #10b981 100%)",
+                              color: "white",
+                              borderRadius: "20px",
+                              fontSize: "0.875rem",
+                              fontWeight: "600",
                             }}
                           >
                             <i className="bi bi-check-circle me-1"></i>
@@ -187,38 +225,49 @@ export default function PlansPage() {
                         )}
                       </div>
 
-                      <div className="mb-4 pb-3" style={{ borderBottom: '2px solid #f1f5f9' }}>
+                      <div
+                        className="mb-4 pb-3"
+                        style={{ borderBottom: "2px solid #f1f5f9" }}
+                      >
                         <div className="d-flex align-items-baseline justify-content-center">
-                          <span 
+                          <span
                             className="fw-bold"
-                            style={{ 
-                              fontSize: '3rem', 
-                              color: '#3b82f6',
-                              lineHeight: '1'
+                            style={{
+                              fontSize: "3rem",
+                              color: "#3b82f6",
+                              lineHeight: "1",
                             }}
                           >
                             {plan.price}
                           </span>
-                          <span className="text-muted ms-2" style={{ fontSize: '1.25rem' }}>
+                          <span
+                            className="text-muted ms-2"
+                            style={{ fontSize: "1.25rem" }}
+                          >
                             {plan.currency}
                           </span>
                         </div>
                         {plan.periodMonths > 1 && (
-                          <div 
+                          <div
                             className="mt-2"
-                            style={{ 
-                              fontSize: '0.9rem', 
-                              fontWeight: '500',
-                              color: '#10b981'
+                            style={{
+                              fontSize: "0.9rem",
+                              fontWeight: "500",
+                              color: "#10b981",
                             }}
                           >
                             <i className="bi bi-calendar-check me-1"></i>
-                            Aylık sadece {calculateMonthlyPrice(plan.price, plan.periodMonths)} {plan.currency}
+                            Aylık sadece{" "}
+                            {calculateMonthlyPrice(
+                              plan.price,
+                              plan.periodMonths
+                            )}{" "}
+                            {plan.currency}
                           </div>
                         )}
-                        <div 
+                        <div
                           className="text-muted mt-1"
-                          style={{ fontSize: '0.95rem', fontWeight: '500' }}
+                          style={{ fontSize: "0.95rem", fontWeight: "500" }}
                         >
                           {plan.periodMonths} ay erişim
                         </div>
@@ -227,20 +276,25 @@ export default function PlansPage() {
                       {plan.features && plan.features.length > 0 && (
                         <ul className="list-unstyled mb-4 text-start">
                           {plan.features.map((feature: string, i: number) => (
-                            <li 
-                              key={i} 
+                            <li
+                              key={i}
                               className="mb-3 d-flex align-items-start"
-                              style={{ color: '#475569' }}
+                              style={{ color: "#475569" }}
                             >
-                              <i 
+                              <i
                                 className="bi bi-check-circle-fill me-3 mt-1"
-                                style={{ 
-                                  color: '#34d399',
-                                  fontSize: '1.1rem',
-                                  flexShrink: 0
+                                style={{
+                                  color: "#34d399",
+                                  fontSize: "1.1rem",
+                                  flexShrink: 0,
                                 }}
                               ></i>
-                              <span style={{ fontSize: '0.95rem', lineHeight: '1.6' }}>
+                              <span
+                                style={{
+                                  fontSize: "0.95rem",
+                                  lineHeight: "1.6",
+                                }}
+                              >
                                 {feature}
                               </span>
                             </li>
@@ -261,27 +315,32 @@ export default function PlansPage() {
                         onClick={() => handleAddToCart(plan)}
                         disabled={isOwned(plan.key) || isInCart(plan.id)}
                         style={{
-                          borderRadius: '12px',
-                          padding: '0.875rem 1.5rem',
-                          fontWeight: '600',
-                          fontSize: '1rem',
-                          border: 'none',
-                          transition: 'all 0.3s ease',
-                          ...(index === 1 && !isOwned(plan.key) && !isInCart(plan.id) && {
-                            background: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)',
-                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
-                          })
+                          borderRadius: "12px",
+                          padding: "0.875rem 1.5rem",
+                          fontWeight: "600",
+                          fontSize: "1rem",
+                          border: "none",
+                          transition: "all 0.3s ease",
+                          ...(index === 1 &&
+                            !isOwned(plan.key) &&
+                            !isInCart(plan.id) && {
+                              background:
+                                "linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)",
+                              boxShadow: "0 4px 15px rgba(59, 130, 246, 0.4)",
+                            }),
                         }}
                         onMouseEnter={(e) => {
                           if (!isOwned(plan.key) && !isInCart(plan.id)) {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.transform =
+                              "translateY(-2px)";
                             if (index === 1) {
-                              e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.5)';
+                              e.currentTarget.style.boxShadow =
+                                "0 6px 20px rgba(59, 130, 246, 0.5)";
                             }
                           }
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.transform = "translateY(0)";
                         }}
                       >
                         {isOwned(plan.key) ? (
@@ -312,7 +371,10 @@ export default function PlansPage() {
           <div className="row mt-5 pt-5">
             <div className="col-12">
               <div className="text-center mb-5">
-                <h2 className="fw-bold mb-3" style={{ fontSize: '2rem', color: '#1e293b' }}>
+                <h2
+                  className="fw-bold mb-3"
+                  style={{ fontSize: "2rem", color: "#1e293b" }}
+                >
                   Tüm Paketlerde Dahil
                 </h2>
                 <p className="text-muted fs-5">Premium üyelik avantajları</p>
@@ -320,147 +382,208 @@ export default function PlansPage() {
 
               <div className="row g-4">
                 <div className="col-md-3 col-6">
-                  <div 
+                  <div
                     className="text-center p-4 rounded-4"
                     style={{
-                      background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                      border: '1px solid #e2e8f0',
-                      transition: 'all 0.3s ease',
-                      cursor: 'pointer'
+                      background:
+                        "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
+                      border: "1px solid #e2e8f0",
+                      transition: "all 0.3s ease",
+                      cursor: "pointer",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-5px)';
-                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.15)';
-                      e.currentTarget.style.borderColor = '#3b82f6';
+                      e.currentTarget.style.transform = "translateY(-5px)";
+                      e.currentTarget.style.boxShadow =
+                        "0 8px 25px rgba(59, 130, 246, 0.15)";
+                      e.currentTarget.style.borderColor = "#3b82f6";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.borderColor = "#e2e8f0";
                     }}
                   >
-                    <div 
+                    <div
                       className="mb-3 mx-auto d-flex align-items-center justify-content-center"
                       style={{
-                        width: '70px',
-                        height: '70px',
-                        background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
-                        borderRadius: '16px',
-                        color: 'white'
+                        width: "70px",
+                        height: "70px",
+                        background:
+                          "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)",
+                        borderRadius: "16px",
+                        color: "white",
                       }}
                     >
-                      <i className="bi bi-map" style={{ fontSize: '2rem' }}></i>
+                      <i className="bi bi-map" style={{ fontSize: "2rem" }}></i>
                     </div>
-                    <h6 className="text-dark fw-bold mb-2" style={{ fontSize: '1.1rem' }}>Güncel Haritalar</h6>
-                    <small className="text-muted" style={{ fontSize: '0.9rem' }}>Coğrafya haritaları</small>
+                    <h6
+                      className="text-dark fw-bold mb-2"
+                      style={{ fontSize: "1.1rem" }}
+                    >
+                      Güncel Haritalar
+                    </h6>
+                    <small
+                      className="text-muted"
+                      style={{ fontSize: "0.9rem" }}
+                    >
+                      Coğrafya haritaları
+                    </small>
                   </div>
                 </div>
                 <div className="col-md-3 col-6">
-                  <div 
+                  <div
                     className="text-center p-4 rounded-4"
                     style={{
-                      background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                      border: '1px solid #e2e8f0',
-                      transition: 'all 0.3s ease',
-                      cursor: 'pointer'
+                      background:
+                        "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
+                      border: "1px solid #e2e8f0",
+                      transition: "all 0.3s ease",
+                      cursor: "pointer",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-5px)';
-                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(52, 211, 153, 0.15)';
-                      e.currentTarget.style.borderColor = '#34d399';
+                      e.currentTarget.style.transform = "translateY(-5px)";
+                      e.currentTarget.style.boxShadow =
+                        "0 8px 25px rgba(52, 211, 153, 0.15)";
+                      e.currentTarget.style.borderColor = "#34d399";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.borderColor = "#e2e8f0";
                     }}
                   >
-                    <div 
+                    <div
                       className="mb-3 mx-auto d-flex align-items-center justify-content-center"
                       style={{
-                        width: '70px',
-                        height: '70px',
-                        background: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
-                        borderRadius: '16px',
-                        color: 'white'
+                        width: "70px",
+                        height: "70px",
+                        background:
+                          "linear-gradient(135deg, #34d399 0%, #10b981 100%)",
+                        borderRadius: "16px",
+                        color: "white",
                       }}
                     >
-                      <i className="bi bi-play-circle" style={{ fontSize: '2rem' }}></i>
+                      <i
+                        className="bi bi-play-circle"
+                        style={{ fontSize: "2rem" }}
+                      ></i>
                     </div>
-                    <h6 className="text-dark fw-bold mb-2" style={{ fontSize: '1.1rem' }}>Video Çözümler</h6>
-                    <small className="text-muted" style={{ fontSize: '0.9rem' }}>Uzman anlatımlar</small>
+                    <h6
+                      className="text-dark fw-bold mb-2"
+                      style={{ fontSize: "1.1rem" }}
+                    >
+                      Video Çözümler
+                    </h6>
+                    <small
+                      className="text-muted"
+                      style={{ fontSize: "0.9rem" }}
+                    >
+                      Uzman anlatımlar
+                    </small>
                   </div>
                 </div>
                 <div className="col-md-3 col-6">
-                  <div 
+                  <div
                     className="text-center p-4 rounded-4"
                     style={{
-                      background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                      border: '1px solid #e2e8f0',
-                      transition: 'all 0.3s ease',
-                      cursor: 'pointer'
+                      background:
+                        "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
+                      border: "1px solid #e2e8f0",
+                      transition: "all 0.3s ease",
+                      cursor: "pointer",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-5px)';
-                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(59, 130, 246, 0.15)';
-                      e.currentTarget.style.borderColor = '#3b82f6';
+                      e.currentTarget.style.transform = "translateY(-5px)";
+                      e.currentTarget.style.boxShadow =
+                        "0 8px 25px rgba(59, 130, 246, 0.15)";
+                      e.currentTarget.style.borderColor = "#3b82f6";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.borderColor = "#e2e8f0";
                     }}
                   >
-                    <div 
+                    <div
                       className="mb-3 mx-auto d-flex align-items-center justify-content-center"
                       style={{
-                        width: '70px',
-                        height: '70px',
-                        background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
-                        borderRadius: '16px',
-                        color: 'white'
+                        width: "70px",
+                        height: "70px",
+                        background:
+                          "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)",
+                        borderRadius: "16px",
+                        color: "white",
                       }}
                     >
-                      <i className="bi bi-people" style={{ fontSize: '2rem' }}></i>
+                      <i
+                        className="bi bi-people"
+                        style={{ fontSize: "2rem" }}
+                      ></i>
                     </div>
-                    <h6 className="text-dark fw-bold mb-2" style={{ fontSize: '1.1rem' }}>Aktif Forum</h6>
-                    <small className="text-muted" style={{ fontSize: '0.9rem' }}>Topluluk desteği</small>
+                    <h6
+                      className="text-dark fw-bold mb-2"
+                      style={{ fontSize: "1.1rem" }}
+                    >
+                      Aktif Forum
+                    </h6>
+                    <small
+                      className="text-muted"
+                      style={{ fontSize: "0.9rem" }}
+                    >
+                      Topluluk desteği
+                    </small>
                   </div>
                 </div>
                 <div className="col-md-3 col-6">
-                  <div 
+                  <div
                     className="text-center p-4 rounded-4"
                     style={{
-                      background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                      border: '1px solid #e2e8f0',
-                      transition: 'all 0.3s ease',
-                      cursor: 'pointer'
+                      background:
+                        "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
+                      border: "1px solid #e2e8f0",
+                      transition: "all 0.3s ease",
+                      cursor: "pointer",
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-5px)';
-                      e.currentTarget.style.boxShadow = '0 8px 25px rgba(52, 211, 153, 0.15)';
-                      e.currentTarget.style.borderColor = '#34d399';
+                      e.currentTarget.style.transform = "translateY(-5px)";
+                      e.currentTarget.style.boxShadow =
+                        "0 8px 25px rgba(52, 211, 153, 0.15)";
+                      e.currentTarget.style.borderColor = "#34d399";
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.borderColor = "#e2e8f0";
                     }}
                   >
-                    <div 
+                    <div
                       className="mb-3 mx-auto d-flex align-items-center justify-content-center"
                       style={{
-                        width: '70px',
-                        height: '70px',
-                        background: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
-                        borderRadius: '16px',
-                        color: 'white'
+                        width: "70px",
+                        height: "70px",
+                        background:
+                          "linear-gradient(135deg, #34d399 0%, #10b981 100%)",
+                        borderRadius: "16px",
+                        color: "white",
                       }}
                     >
-                      <i className="bi bi-headset" style={{ fontSize: '2rem' }}></i>
+                      <i
+                        className="bi bi-headset"
+                        style={{ fontSize: "2rem" }}
+                      ></i>
                     </div>
-                    <h6 className="text-dark fw-bold mb-2" style={{ fontSize: '1.1rem' }}>7/24 Destek</h6>
-                    <small className="text-muted" style={{ fontSize: '0.9rem' }}>Müşteri hizmetleri</small>
+                    <h6
+                      className="text-dark fw-bold mb-2"
+                      style={{ fontSize: "1.1rem" }}
+                    >
+                      7/24 Destek
+                    </h6>
+                    <small
+                      className="text-muted"
+                      style={{ fontSize: "0.9rem" }}
+                    >
+                      Müşteri hizmetleri
+                    </small>
                   </div>
                 </div>
               </div>
