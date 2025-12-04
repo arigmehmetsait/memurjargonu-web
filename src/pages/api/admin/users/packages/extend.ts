@@ -65,7 +65,7 @@ export default async function handler(
       // Mevcut claims'leri al ve koru (özellikle admin claim'ini)
       const userRecord = await adminAuth.getUser(userId);
       const existingClaims = userRecord.customClaims || {};
-      
+
       const userData = await packageService.getUserPackages(userId);
       const isKpssFullActive =
         userData.ownedPackages[PackageType.KPSS_FULL] &&
@@ -78,18 +78,23 @@ export default async function handler(
         Date.now();
 
       // Admin claim'ini özellikle koru
-      const newClaims = {
+      const newClaims: {
+        premium: boolean | null;
+        premiumExp: number;
+        admin?: boolean;
+        [key: string]: any;
+      } = {
         ...existingClaims, // Tüm mevcut claims'leri koru
         premium: isKpssFullActive,
         premiumExp: expMs,
       };
-      
+
       // Eğer kullanıcı seed listesindeyse, admin claim'ini zorunlu olarak ekle
       const seedUids = (process.env.ADMIN_SEED_UIDS || "")
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-      
+
       if (seedUids.includes(userId)) {
         newClaims.admin = true;
       }

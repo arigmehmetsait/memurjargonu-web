@@ -59,24 +59,29 @@ export default async function handler(
       // çünkü paket silme işlemi sırasında custom claims değişebilir
       const userRecord = await adminAuth.getUser(userId);
       const existingClaims = userRecord.customClaims || {};
-      
+
       // Admin claim'ini özellikle koru
-      const newClaims = {
+      const newClaims: {
+        premium: boolean | null;
+        premiumExp: number;
+        admin?: boolean;
+        [key: string]: any;
+      } = {
         ...existingClaims, // Tüm mevcut claims'leri koru
         premium: false,
         premiumExp: Date.now(),
       };
-      
+
       // Eğer kullanıcı seed listesindeyse, admin claim'ini zorunlu olarak ekle
       const seedUids = (process.env.ADMIN_SEED_UIDS || "")
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
-      
+
       if (seedUids.includes(userId)) {
         newClaims.admin = true;
       }
-      
+
       await adminAuth.setCustomUserClaims(userId, newClaims);
       // Not: revokeRefreshTokens çağrılmıyor çünkü kullanıcıyı otomatik çıkış yaptırır
       // Custom claims değişiklikleri bir sonraki token yenilemede otomatik yansıyacak

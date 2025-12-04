@@ -36,7 +36,10 @@ export default async function handler(
     const currentClaims = currentUser.customClaims || {};
 
     // Admin yetkisini ekle (mevcut claims'leri koruyarak)
-    const newClaims = { ...currentClaims, admin: true };
+    const newClaims: {
+      admin: boolean;
+      [key: string]: any;
+    } = { ...currentClaims, admin: true };
 
     // Custom claims'i güncelle
     await adminAuth.setCustomUserClaims(targetUid, newClaims);
