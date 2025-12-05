@@ -162,30 +162,60 @@ export default async function handler(
       }
 
       // Konuyu boslukdoldurmaTopics koleksiyonuna kaydet
-      // Subject'i doküman adı olarak kullan, koleksiyon adını topics array'ine ekle
-      const mainTopic = subject || targetCollection || "Genel";
-      const subTopic = targetCollection;
+      // Deneme adını doküman adı olarak kullan (ör: "Güncel Bilgiler"), alt koleksiyon adını topics array'ine ekle
+      let denemeName = denemeDoc.data()?.name;
       
-      if (mainTopic && mainTopic.trim()) {
+      // Eğer name alanı yoksa, deneme ID'sinden isim çıkar
+      if (!denemeName || !denemeName.trim()) {
+        // ID formatı: "bosluk-cografya-1764661175271" veya sadece "cografya"
+        const idStr = typeof denemeId === "string" ? denemeId : "";
+        if (idStr.startsWith("bosluk-")) {
+          // "bosluk-cografya-1764661175271" -> "Coğrafya"
+          const namePart = idStr.replace(/^bosluk-/, "").replace(/-\d+$/, "");
+          // Türkçe karakter dönüşümü
+          const nameMap: Record<string, string> = {
+            cografya: "Coğrafya",
+            tarih: "Tarih",
+            vatandaslik: "Vatandaşlık",
+            "guncel-bilgiler": "Güncel Bilgiler",
+          };
+          denemeName = nameMap[namePart] || namePart
+            .split("-")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+        } else {
+          // "cografya" -> "Coğrafya"
+          const nameMap: Record<string, string> = {
+            cografya: "Coğrafya",
+            tarih: "Tarih",
+            vatandaslik: "Vatandaşlık",
+            "guncel-bilgiler": "Güncel Bilgiler",
+          };
+          denemeName = nameMap[idStr] || idStr.charAt(0).toUpperCase() + idStr.slice(1);
+        }
+      }
+      
+      // Deneme adı ve alt koleksiyon adı varsa topics'e ekle
+      if (denemeName && denemeName.trim() && targetCollection && targetCollection.trim()) {
         try {
           const topicsCollectionRef = adminDb.collection("boslukdoldurmaTopics");
-          const topicDocRef = topicsCollectionRef.doc(mainTopic.trim());
+          const topicDocRef = topicsCollectionRef.doc(denemeName.trim());
           const topicDoc = await topicDocRef.get();
 
           if (topicDoc.exists) {
             // Doküman varsa, topics array'ini güncelle
             const existingData = topicDoc.data();
             const existingTopics = existingData?.topics || [];
-            // Eğer alt konu (koleksiyon adı) zaten yoksa ekle
-            if (subTopic && subTopic.trim() && !existingTopics.includes(subTopic.trim())) {
+            // Eğer alt koleksiyon adı zaten yoksa ekle
+            if (!existingTopics.includes(targetCollection.trim())) {
               await topicDocRef.update({
-                topics: [...existingTopics, subTopic.trim()],
+                topics: [...existingTopics, targetCollection.trim()],
               });
             }
           } else {
-            // Doküman yoksa oluştur
+            // Doküman yoksa oluştur (deneme adı doküman adı, alt koleksiyon adı topics array'ine)
             await topicDocRef.set({
-              topics: subTopic && subTopic.trim() ? [subTopic.trim()] : [],
+              topics: [targetCollection.trim()],
             });
           }
         } catch (topicError) {
