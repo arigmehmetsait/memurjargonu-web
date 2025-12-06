@@ -162,7 +162,7 @@ export default function ContactPage() {
                           lineHeight: "1.6",
                         }}
                       >
-                        Kosova Mahallesi Çelikeller sokak 11/A
+                        Kosova Mahallesi
                         <br />
                         Ata sitesi Selçuklu Konya
                       </p>

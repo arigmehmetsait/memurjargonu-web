@@ -249,6 +249,33 @@ export default function AdminHome() {
                   </div>
                 </div>
 
+                <div className="col-md-3">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
+                      <div className="admin-icon mb-3">
+                        <i className="bi bi-bell"></i>
+                      </div>
+                      <h5 className="card-title fw-bold">Bildirim Yönetimi</h5>
+                      <p className="card-text text-muted">
+                        Kullanıcılara push bildirimleri gönderin ve bildirim
+                        geçmişini görüntüleyin.
+                      </p>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/notifications"
+                          className="btn w-100"
+                          style={{
+                            backgroundColor: "black",
+                            color: "#fff",
+                          }}
+                        >
+                          Bildirimleri Yönet
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* <div className="col-md-3">
                   <div className="card h-100 shadow-sm admin-card border-warning">
                     <div className="card-body text-center p-4">
