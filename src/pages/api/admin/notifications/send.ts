@@ -52,6 +52,7 @@ export default async function handler(
 
     if (targetType === "all") {
       // Tüm kullanıcıların token'larını al
+      // userTokens collection'ından token'ları al
       const userTokensSnapshot = await adminDb.collection("userTokens").get();
       const allTokens: string[] = [];
 
@@ -61,12 +62,34 @@ export default async function handler(
         allTokens.push(...tokens);
       });
 
+      // users collection'ından da fcmToken'ları al (Flutter uygulaması için)
+      const usersSnapshot = await adminDb.collection("users").get();
+      usersSnapshot.forEach((doc) => {
+        const userData = doc.data();
+        const fcmToken = userData?.fcmToken;
+        if (
+          fcmToken &&
+          typeof fcmToken === "string" &&
+          !allTokens.includes(fcmToken)
+        ) {
+          allTokens.push(fcmToken);
+        }
+      });
+
       tokensToSend = allTokens;
     } else if (targetType === "specific" && targetUserIds) {
       // Seçili kullanıcıların token'larını al
+      // Önce userTokens collection'ından kontrol et, yoksa users collection'ındaki fcmToken'ı kontrol et
       const userTokenDocs = await Promise.all(
         targetUserIds.map((userId) =>
           adminDb.collection("userTokens").doc(userId).get()
+        )
+      );
+
+      // users collection'ından da token'ları kontrol et (Flutter uygulaması için)
+      const userDocs = await Promise.all(
+        targetUserIds.map((userId) =>
+          adminDb.collection("users").doc(userId).get()
         )
       );
 
@@ -74,16 +97,34 @@ export default async function handler(
       const usersWithoutTokens: string[] = [];
 
       userTokenDocs.forEach((doc, index) => {
+        const userId = targetUserIds[index];
+        let foundTokens: string[] = [];
+
+        // userTokens collection'ından token'ları al
         if (doc.exists) {
           const data = doc.data();
           const tokens = data?.tokens || [];
-          if (tokens.length > 0) {
-            specificTokens.push(...tokens);
-          } else {
-            usersWithoutTokens.push(targetUserIds[index]);
+          foundTokens.push(...tokens);
+        }
+
+        // users collection'ından fcmToken'ı kontrol et (Flutter uygulaması için)
+        const userDoc = userDocs[index];
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          const fcmToken = userData?.fcmToken;
+          if (
+            fcmToken &&
+            typeof fcmToken === "string" &&
+            !foundTokens.includes(fcmToken)
+          ) {
+            foundTokens.push(fcmToken);
           }
+        }
+
+        if (foundTokens.length > 0) {
+          specificTokens.push(...foundTokens);
         } else {
-          usersWithoutTokens.push(targetUserIds[index]);
+          usersWithoutTokens.push(userId);
         }
       });
 
