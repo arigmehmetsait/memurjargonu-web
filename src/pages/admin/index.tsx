@@ -221,34 +221,6 @@ export default function AdminHome() {
                     </div>
                   </div>
                 </div>
-
-                <div className="col-md-3">
-                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
-                    <div className="card-body text-center p-4 d-flex flex-column h-100">
-                      <div className="admin-icon mb-3">
-                        <i className="bi bi-bug"></i>
-                      </div>
-                      <h5 className="card-title fw-bold">Problem Raporları</h5>
-                      <p className="card-text text-muted">
-                        Kullanıcıların bildirdiği problemleri görüntüleyin ve
-                        durumlarını yönetin.
-                      </p>
-                      <div className="mt-auto">
-                        <Link
-                          href="/admin/problem-reports"
-                          className="btn w-100"
-                          style={{
-                            backgroundColor: "black",
-                            color: "#fff",
-                          }}
-                        >
-                          Problem Raporları
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="col-md-3">
                   <div className="card h-100 shadow-sm admin-card d-flex flex-column">
                     <div className="card-body text-center p-4 d-flex flex-column h-100">
@@ -270,6 +242,32 @@ export default function AdminHome() {
                           }}
                         >
                           Bildirimleri Yönet
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-md-3">
+                  <div className="card h-100 shadow-sm admin-card d-flex flex-column">
+                    <div className="card-body text-center p-4 d-flex flex-column h-100">
+                      <div className="admin-icon mb-3">
+                        <i className="bi bi-bug"></i>
+                      </div>
+                      <h5 className="card-title fw-bold">Problem Raporları</h5>
+                      <p className="card-text text-muted">
+                        Kullanıcıların bildirdiği problemleri görüntüleyin ve
+                        durumlarını yönetin.
+                      </p>
+                      <div className="mt-auto">
+                        <Link
+                          href="/admin/problem-reports"
+                          className="btn w-100"
+                          style={{
+                            backgroundColor: "black",
+                            color: "#fff",
+                          }}
+                        >
+                          Problem Raporları
                         </Link>
                       </div>
                     </div>

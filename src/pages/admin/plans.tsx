@@ -19,6 +19,7 @@ import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
 import { PACKAGE_INFO, PACKAGE_CATEGORIES } from "@/constants/packages";
 import { PackageType } from "@/types/package";
 import Header from "@/components/Header";
+import { getValidToken } from "@/utils/tokenCache";
 
 type Plan = {
   id: string;
@@ -29,6 +30,7 @@ type Plan = {
   isActive: boolean;
   index: number;
   key: string;
+  images?: string[];
 };
 
 export default function PlansAdmin() {
@@ -167,6 +169,7 @@ export default function PlansAdmin() {
     periodMonths: 1,
     key: "",
     features: [] as string[],
+    images: [] as string[],
   });
   const [editPlan, setEditPlan] = useState({
     name: "",
@@ -175,7 +178,11 @@ export default function PlansAdmin() {
     periodMonths: 1,
     key: "",
     features: [] as string[],
+    images: [] as string[],
   });
+  const [uploadingImages, setUploadingImages] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   const addPlan = async () => {
     try {
@@ -195,6 +202,7 @@ export default function PlansAdmin() {
         isActive: false,
         index: (plans.at(-1)?.index ?? 0) + 1,
         features: newPlan.features,
+        images: newPlan.images || [],
       });
       await load();
       setMsg("Plan başarıyla eklendi ✅");
@@ -206,6 +214,7 @@ export default function PlansAdmin() {
         periodMonths: 1,
         key: "",
         features: [],
+        images: [],
       });
     } catch (e: any) {
       setMsg(`Hata: ${e?.message || e}`);
@@ -289,6 +298,113 @@ export default function PlansAdmin() {
     });
   };
 
+  // Resim yükleme fonksiyonu
+  const handleImageUpload = async (
+    file: File,
+    isEdit: boolean = false
+  ): Promise<string | null> => {
+    try {
+      const idToken = await getValidToken();
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("/api/admin/plans/upload-image", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Resim yüklenemedi");
+      }
+
+      const data = await response.json();
+      return data.data.imageUrl;
+    } catch (error: any) {
+      setMsg(`Resim yükleme hatası: ${error.message}`);
+      return null;
+    }
+  };
+
+  const handleImageSelect = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    isEdit: boolean = false
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Max 5 resim kontrolü
+    const currentImages = isEdit ? editPlan.images : newPlan.images;
+    if (currentImages.length >= 5) {
+      setMsg("Maksimum 5 resim ekleyebilirsiniz");
+      return;
+    }
+
+    // Dosya formatı kontrolü
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      setMsg("Sadece JPG, PNG, WEBP ve GIF formatları kabul edilir");
+      return;
+    }
+
+    // Dosya boyutu kontrolü (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setMsg("Resim boyutu 5MB'dan küçük olmalıdır");
+      return;
+    }
+
+    const uploadKey = isEdit ? `edit-${Date.now()}` : `new-${Date.now()}`;
+    setUploadingImages((prev) => ({ ...prev, [uploadKey]: true }));
+
+    const imageUrl = await handleImageUpload(file, isEdit);
+
+    if (imageUrl) {
+      if (isEdit) {
+        setEditPlan({
+          ...editPlan,
+          images: [...editPlan.images, imageUrl],
+        });
+      } else {
+        setNewPlan({
+          ...newPlan,
+          images: [...newPlan.images, imageUrl],
+        });
+      }
+    }
+
+    setUploadingImages((prev) => {
+      const newState = { ...prev };
+      delete newState[uploadKey];
+      return newState;
+    });
+
+    // Input'u temizle
+    e.target.value = "";
+  };
+
+  const handleImageRemove = (index: number, isEdit: boolean = false) => {
+    if (isEdit) {
+      setEditPlan({
+        ...editPlan,
+        images: editPlan.images.filter((_, i) => i !== index),
+      });
+    } else {
+      setNewPlan({
+        ...newPlan,
+        images: newPlan.images.filter((_, i) => i !== index),
+      });
+    }
+  };
+
   const handleEditPlan = (plan: Plan) => {
     setPlanToEdit(plan);
     setEditPlan({
@@ -298,6 +414,7 @@ export default function PlansAdmin() {
       periodMonths: plan.periodMonths,
       key: plan.key,
       features: (plan as any).features || [],
+      images: plan.images || [],
     });
     setIsEditModalOpen(true);
   };
@@ -324,6 +441,7 @@ export default function PlansAdmin() {
         periodMonths: editPlan.periodMonths,
         key: editPlan.key,
         features: editPlan.features,
+        images: editPlan.images || [],
       });
 
       await load();
@@ -337,6 +455,7 @@ export default function PlansAdmin() {
         periodMonths: 1,
         key: "",
         features: [],
+        images: [],
       });
     } catch (e: any) {
       setMsg(`Hata: ${e?.message || e}`);
@@ -1030,6 +1149,75 @@ export default function PlansAdmin() {
                 />
               </div>
 
+              {/* Images */}
+              <div className="mb-3">
+                <label className="form-label fw-semibold">
+                  <i className="bi bi-image me-2"></i>
+                  Resimler (Maksimum 5)
+                </label>
+                <div className="form-text mb-2">
+                  Plan için resim ekleyin. Maksimum 5 resim ekleyebilirsiniz.
+                  <br />
+                  <small className="text-muted">
+                    Kabul edilen formatlar: JPG, PNG, WEBP, GIF (Maksimum 5MB)
+                  </small>
+                </div>
+                <input
+                  type="file"
+                  className="form-control form-control-sm mb-2"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                  onChange={(e) => handleImageSelect(e, false)}
+                  disabled={newPlan.images.length >= 5}
+                />
+                {newPlan.images.length > 0 && (
+                  <div className="row g-2 mt-2">
+                    {newPlan.images.map((imageUrl, index) => (
+                      <div key={index} className="col-md-4 position-relative">
+                        <img
+                          src={imageUrl}
+                          alt={`Plan resmi ${index + 1}`}
+                          className="img-thumbnail"
+                          style={{
+                            width: "100%",
+                            height: "150px",
+                            objectFit: "cover",
+                          }}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src =
+                              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect fill='%23ddd' width='150' height='150'/%3E%3Ctext fill='%23999' font-family='sans-serif' font-size='14' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3EResim Yüklenemedi%3C/text%3E%3C/svg%3E";
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-danger position-absolute top-0 end-0 m-1"
+                          onClick={() => handleImageRemove(index, false)}
+                          style={{
+                            zIndex: 10,
+                            padding: "0.25rem 0.5rem",
+                            fontSize: "0.75rem",
+                            lineHeight: 1,
+                          }}
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {Object.values(uploadingImages).some((v) => v) && (
+                  <div className="mt-2">
+                    <div
+                      className="spinner-border spinner-border-sm me-2"
+                      role="status"
+                    >
+                      <span className="visually-hidden">Yükleniyor...</span>
+                    </div>
+                    <small className="text-muted">Resim yükleniyor...</small>
+                  </div>
+                )}
+              </div>
+
               {/* Action Buttons */}
               <div className="d-flex gap-2 justify-content-end">
                 <button
@@ -1224,6 +1412,75 @@ export default function PlansAdmin() {
                     setEditPlan({ ...editPlan, features });
                   }}
                 />
+              </div>
+
+              {/* Images */}
+              <div className="mb-3">
+                <label className="form-label fw-semibold">
+                  <i className="bi bi-image me-2"></i>
+                  Resimler (Maksimum 5)
+                </label>
+                <div className="form-text mb-2">
+                  Plan için resim ekleyin. Maksimum 5 resim ekleyebilirsiniz.
+                  <br />
+                  <small className="text-muted">
+                    Kabul edilen formatlar: JPG, PNG, WEBP, GIF (Maksimum 5MB)
+                  </small>
+                </div>
+                <input
+                  type="file"
+                  className="form-control form-control-sm mb-2"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                  onChange={(e) => handleImageSelect(e, true)}
+                  disabled={editPlan.images.length >= 5}
+                />
+                {editPlan.images.length > 0 && (
+                  <div className="row g-2 mt-2">
+                    {editPlan.images.map((imageUrl, index) => (
+                      <div key={index} className="col-md-4 position-relative">
+                        <img
+                          src={imageUrl}
+                          alt={`Plan resmi ${index + 1}`}
+                          className="img-thumbnail"
+                          style={{
+                            width: "100%",
+                            height: "150px",
+                            objectFit: "cover",
+                          }}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src =
+                              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect fill='%23ddd' width='150' height='150'/%3E%3Ctext fill='%23999' font-family='sans-serif' font-size='14' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3EResim Yüklenemedi%3C/text%3E%3C/svg%3E";
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-danger position-absolute top-0 end-0 m-1"
+                          onClick={() => handleImageRemove(index, true)}
+                          style={{
+                            zIndex: 10,
+                            padding: "0.25rem 0.5rem",
+                            fontSize: "0.75rem",
+                            lineHeight: 1,
+                          }}
+                        >
+                          <i className="bi bi-x"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {Object.values(uploadingImages).some((v) => v) && (
+                  <div className="mt-2">
+                    <div
+                      className="spinner-border spinner-border-sm me-2"
+                      role="status"
+                    >
+                      <span className="visually-hidden">Yükleniyor...</span>
+                    </div>
+                    <small className="text-muted">Resim yükleniyor...</small>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

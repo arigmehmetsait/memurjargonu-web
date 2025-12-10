@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   collection,
   getDocs,
@@ -23,6 +23,64 @@ export default function PlansPage() {
     {}
   );
   const { addToCart, isInCart } = useCart();
+  const carouselInitialized = useRef<Set<string>>(new Set());
+  const touchStartX = useRef<{ [key: string]: number }>({});
+  const touchStartY = useRef<{ [key: string]: number }>({});
+
+  // Carousel'leri initialize et ve swipe desteği ekle
+  useEffect(() => {
+    if (typeof window === "undefined" || plans.length === 0) return;
+
+    const initCarousels = () => {
+      const bootstrap = (window as any).bootstrap;
+      if (!bootstrap || !bootstrap.Carousel) {
+        setTimeout(initCarousels, 100);
+        return;
+      }
+
+      plans.forEach((plan) => {
+        if (plan.images && plan.images.length > 1) {
+          const carouselId = `carousel-${plan.id}`;
+          const carouselElement = document.getElementById(carouselId);
+
+          if (carouselElement && !carouselInitialized.current.has(carouselId)) {
+            try {
+              // Bootstrap carousel'i initialize et - otomatik kayma KAPALI
+              const carousel = new bootstrap.Carousel(carouselElement, {
+                ride: false,
+                interval: false,
+                wrap: true,
+                keyboard: true,
+                pause: false,
+                touch: true,
+              });
+
+              // Otomatik kaymayı tamamen kapat
+              carousel.pause();
+              if (carousel._interval) {
+                clearInterval(carousel._interval);
+                carousel._interval = null;
+              }
+
+              carouselInitialized.current.add(carouselId);
+            } catch (error) {
+              console.warn(
+                `Carousel ${carouselId} initialize edilemedi:`,
+                error
+              );
+            }
+          }
+        }
+      });
+    };
+
+    if (document.readyState === "complete") {
+      initCarousels();
+    } else {
+      window.addEventListener("load", initCarousels);
+      return () => window.removeEventListener("load", initCarousels);
+    }
+  }, [plans]);
 
   // Fetch user's owned packages
   useEffect(() => {
@@ -190,12 +248,178 @@ export default function PlansPage() {
                           fontSize: "0.875rem",
                           fontWeight: "600",
                           letterSpacing: "0.5px",
+                          zIndex: 2,
                         }}
                       >
                         <i className="bi bi-star-fill me-2"></i>
                         EN POPÜLER
                       </div>
                     )}
+
+                    {/* Plan Images */}
+                    {plan.images && plan.images.length > 0 && (
+                      <div
+                        className="position-relative"
+                        style={{
+                          height: "250px",
+                          overflow: "hidden",
+                          background: "#f8f9fa",
+                        }}
+                      >
+                        <div
+                          id={`carousel-${plan.id}`}
+                          className="carousel slide h-100"
+                          data-bs-ride="false"
+                          data-bs-interval="false"
+                        >
+                          <div
+                            className="carousel-inner h-100"
+                            onTouchStart={(e) => {
+                              const carouselId = `carousel-${plan.id}`;
+                              const touch = e.touches[0];
+                              touchStartX.current[carouselId] = touch.clientX;
+                              touchStartY.current[carouselId] = touch.clientY;
+                            }}
+                            onTouchEnd={(e) => {
+                              const carouselId = `carousel-${plan.id}`;
+                              if (!touchStartX.current[carouselId]) return;
+
+                              const touch = e.changedTouches[0];
+                              const deltaX =
+                                touch.clientX - touchStartX.current[carouselId];
+                              const deltaY =
+                                touch.clientY - touchStartY.current[carouselId];
+
+                              // Sadece yatay kaydırma (swipe) - dikey kaydırmadan ayırt et
+                              if (
+                                Math.abs(deltaX) > Math.abs(deltaY) &&
+                                Math.abs(deltaX) > 50
+                              ) {
+                                const bootstrap = (window as any).bootstrap;
+                                if (bootstrap) {
+                                  const carouselElement =
+                                    document.getElementById(carouselId);
+                                  if (carouselElement) {
+                                    const carousel =
+                                      bootstrap.Carousel.getInstance(
+                                        carouselElement
+                                      );
+                                    if (carousel) {
+                                      if (deltaX > 0) {
+                                        carousel.prev();
+                                      } else {
+                                        carousel.next();
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+
+                              delete touchStartX.current[carouselId];
+                              delete touchStartY.current[carouselId];
+                            }}
+                          >
+                            {plan.images.map((imageUrl, imgIndex) => (
+                              <div
+                                key={imgIndex}
+                                className={`carousel-item h-100 ${
+                                  imgIndex === 0 ? "active" : ""
+                                }`}
+                              >
+                                <img
+                                  src={imageUrl}
+                                  alt={`${plan.name} - Resim ${imgIndex + 1}`}
+                                  className="d-block w-100 h-100"
+                                  style={{
+                                    objectFit: "contain",
+                                    objectPosition: "center",
+                                    userSelect: "none",
+                                    WebkitUserSelect: "none",
+                                    pointerEvents: "none",
+                                  }}
+                                  draggable={false}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src =
+                                      "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Crect fill='%23ddd' width='250' height='250'/%3E%3Ctext fill='%23999' font-family='sans-serif' font-size='14' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3EResim Yüklenemedi%3C/text%3E%3C/svg%3E";
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          {plan.images.length > 1 && (
+                            <>
+                              <button
+                                className="carousel-control-prev"
+                                type="button"
+                                data-bs-target={`#carousel-${plan.id}`}
+                                data-bs-slide="prev"
+                                style={{
+                                  backgroundColor: "rgba(0, 0, 0, 0.3)",
+                                  width: "40px",
+                                  height: "40px",
+                                  borderRadius: "50%",
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  left: "10px",
+                                }}
+                              >
+                                <span
+                                  className="carousel-control-prev-icon"
+                                  aria-hidden="true"
+                                  style={{
+                                    filter: "invert(1)",
+                                  }}
+                                ></span>
+                                <span className="visually-hidden">
+                                  Previous
+                                </span>
+                              </button>
+                              <button
+                                className="carousel-control-next"
+                                type="button"
+                                data-bs-target={`#carousel-${plan.id}`}
+                                data-bs-slide="next"
+                                style={{
+                                  backgroundColor: "rgba(0, 0, 0, 0.3)",
+                                  width: "40px",
+                                  height: "40px",
+                                  borderRadius: "50%",
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  right: "10px",
+                                }}
+                              >
+                                <span
+                                  className="carousel-control-next-icon"
+                                  aria-hidden="true"
+                                  style={{
+                                    filter: "invert(1)",
+                                  }}
+                                ></span>
+                                <span className="visually-hidden">Next</span>
+                              </button>
+                              <div className="carousel-indicators">
+                                {plan.images.map((_, imgIndex) => (
+                                  <button
+                                    key={imgIndex}
+                                    type="button"
+                                    data-bs-target={`#carousel-${plan.id}`}
+                                    data-bs-slide-to={imgIndex}
+                                    className={imgIndex === 0 ? "active" : ""}
+                                    aria-current={
+                                      imgIndex === 0 ? "true" : "false"
+                                    }
+                                    aria-label={`Slide ${imgIndex + 1}`}
+                                  ></button>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <div
                       className="card-body p-5 text-center"
                       style={{ marginTop: index === 1 ? "40px" : "0" }}
