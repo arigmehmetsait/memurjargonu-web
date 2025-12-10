@@ -8,4 +8,5 @@ export type Plan = {
   isActive: boolean;
   index: number;
   features: string[];
+  images?: string[]; // Max 5 resim URL'leri
 };
