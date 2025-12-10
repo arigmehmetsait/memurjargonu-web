@@ -96,13 +96,16 @@ export default async function handler(
 
     // Metadata'yı kontrol et ve token'ı al/oluştur
     const [metadata] = await file.getMetadata();
-    let downloadToken = metadata.metadata?.firebaseStorageDownloadTokens;
+    const existingToken = metadata.metadata?.firebaseStorageDownloadTokens;
+    let downloadToken: string;
 
     // Token yoksa oluştur ve ekle
-    if (!downloadToken) {
+    if (existingToken && typeof existingToken === "string") {
+      downloadToken = existingToken;
+    } else {
       const { randomUUID } = require("crypto");
       downloadToken = randomUUID();
-
+      
       // Metadata'yı güncelle (token'ı ekle)
       await file.setMetadata({
         metadata: {
