@@ -98,7 +98,7 @@ export default async function handler(
 
       userTokenDocs.forEach((doc, index) => {
         const userId = targetUserIds[index];
-        let foundTokens: string[] = [];
+        const foundTokens: string[] = [];
 
         // userTokens collection'ından token'ları al
         if (doc.exists) {
