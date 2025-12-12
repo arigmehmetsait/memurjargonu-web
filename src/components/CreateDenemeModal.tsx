@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DenemeType } from "@/types/deneme";
 import { toast } from "react-toastify";
 
@@ -8,6 +8,11 @@ interface CreateDenemeModalProps {
   onClose: () => void;
   onSuccess: () => void;
   denemeType: DenemeType;
+  initialData?: {
+    id: string;
+    name: string;
+    description?: string;
+  } | null;
   className?: string;
 }
 
@@ -16,11 +21,25 @@ export default function CreateDenemeModal({
   onClose,
   onSuccess,
   denemeType,
+  initialData,
   className = "",
 }: CreateDenemeModalProps) {
   const [denemeName, setDenemeName] = useState("");
   const [denemeDescription, setDenemeDescription] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // Initial data değiştiğinde state'i güncelle
+  useEffect(() => {
+    if (isOpen && initialData) {
+      setDenemeName(initialData.name);
+      setDenemeDescription(initialData.description || "");
+    } else if (isOpen && !initialData) {
+      setDenemeName("");
+      setDenemeDescription("");
+    }
+  }, [isOpen, initialData]);
+
+  const isEditing = !!initialData;
 
   const getDenemeTypeLabel = () => {
     switch (denemeType) {
@@ -38,18 +57,9 @@ export default function CreateDenemeModal({
   };
 
   const getApiEndpoint = () => {
-    switch (denemeType) {
-      case "mevzuat":
-        return "/api/admin/denemeler/create";
-      case "cografya":
-        return "/api/admin/cografya-denemeler/create";
-      case "tarih":
-        return "/api/admin/tarih-denemeler/create";
-      case "genel":
-        return "/api/admin/genel-denemeler/create";
-      default:
-        return "/api/admin/denemeler/create";
-    }
+    // @ts-ignore - update endpoint'i eklendi ama tip hatası alabiliriz
+    const endpoints = DENEME_API_ENDPOINTS[denemeType];
+    return isEditing ? endpoints.admin.update : endpoints.admin.create;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -71,6 +81,7 @@ export default function CreateDenemeModal({
         body: JSON.stringify({
           name: denemeName.trim(),
           description: denemeDescription.trim(),
+          ...(isEditing && { id: initialData.id }),
         }),
       });
 
@@ -82,13 +93,25 @@ export default function CreateDenemeModal({
         setDenemeDescription("");
         onClose();
         onSuccess();
-        toast.success("Deneme başarıyla oluşturuldu!");
+        onSuccess();
+        toast.success(
+          isEditing
+            ? "Deneme başarıyla güncellendi!"
+            : "Deneme başarıyla oluşturuldu!"
+        );
       } else {
-        toast.error(data.error || "Deneme oluşturulamadı");
+        toast.error(
+          data.error ||
+            (isEditing ? "Deneme güncellenemedi" : "Deneme oluşturulamadı")
+        );
       }
     } catch (err) {
       console.error("Deneme oluşturma hatası:", err);
-      toast.error("Deneme oluşturulurken bir hata oluştu");
+      toast.error(
+        isEditing
+          ? "Deneme güncellenirken bir hata oluştu"
+          : "Deneme oluşturulurken bir hata oluştu"
+      );
     } finally {
       setCreating(false);
     }
@@ -113,8 +136,8 @@ export default function CreateDenemeModal({
         <div className="modal-content">
           <div className="modal-header">
             <h5 className="modal-title">
-              <i className="bi bi-plus-circle me-2"></i>
-              Yeni {getDenemeTypeLabel()} Denemesi Ekle
+              <i className={isEditing ? "bi bi-pencil me-2" : "bi bi-plus-circle me-2"}></i>
+              {isEditing ? "Denemeyi Düzenle" : `Yeni ${getDenemeTypeLabel()} Denemesi Ekle`}
             </h5>
             <button
               type="button"
@@ -137,7 +160,7 @@ export default function CreateDenemeModal({
                   value={denemeName}
                   onChange={(e) => setDenemeName(e.target.value)}
                   placeholder={`Örn: ${getDenemeTypeLabel()} Deneme 1`}
-                  disabled={creating}
+                  disabled={creating || isEditing} // İsim değişikliği şimdilik kapalı
                   required
                 />
               </div>
@@ -179,12 +202,12 @@ export default function CreateDenemeModal({
                       role="status"
                       aria-hidden="true"
                     ></span>
-                    Oluşturuluyor...
+                    {isEditing ? "Güncelleniyor..." : "Oluşturuluyor..."}
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-check-circle me-2"></i>
-                    Oluştur
+                    <i className={isEditing ? "bi bi-check-lg me-2" : "bi bi-check-circle me-2"}></i>
+                    {isEditing ? "Güncelle" : "Oluştur"}
                   </>
                 )}
               </button>

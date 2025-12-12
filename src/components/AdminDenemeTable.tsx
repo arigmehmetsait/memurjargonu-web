@@ -260,21 +260,19 @@ export default function AdminDenemeTable({
                   </td>
                   <td>
                     <div className="btn-group" role="group">
-                      {denemeType !== "genel" && (
-                        <button
-                          className="btn btn-outline-primary btn-sm"
-                          title="Denemeyi Görüntüle (Kullanıcı Görünümü)"
-                          onClick={() => {
-                            router.push(
-                              `/${getDenemeTypePath()}/${encodeURIComponent(
-                                deneme.id
-                              )}`
-                            );
-                          }}
-                        >
-                          <i className="bi bi-eye"></i>
-                        </button>
-                      )}
+                      {/* <button
+                        className="btn btn-outline-primary btn-sm"
+                        title="Denemeyi Görüntüle (Kullanıcı Görünümü)"
+                        onClick={() => {
+                          router.push(
+                            `/${getDenemeTypePath()}/${encodeURIComponent(
+                              deneme.id
+                            )}`
+                          );
+                        }}
+                      >
+                        <i className="bi bi-eye"></i>
+                      </button> */}
                       <button
                         className="btn btn-outline-success btn-sm"
                         title="Soruları Yönet (Admin Görünümü)"

@@ -6,6 +6,23 @@ import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { getValidToken } from "@/utils/tokenCache";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { toast } from "react-toastify";
 
 interface FieldValue {
@@ -28,6 +45,91 @@ interface QuestionFormData {
   difficulty?: string;
   levelNumber?: string; // Yeni soru eklerken level numarası
   levelGroup?: string; // Yeni soru eklerken level grubu (örn: level2, level3)
+}
+
+// Sortable Item Component
+function SortableItem({
+  id,
+  children,
+  handleEdit,
+  handleDelete,
+  handleToggle,
+  isExpanded,
+  itemCount,
+}: {
+  id: string;
+  children?: React.ReactNode;
+  handleEdit: () => void;
+  handleDelete: () => void;
+  handleToggle: () => void;
+  isExpanded: boolean;
+  itemCount: number;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 1000 : "auto",
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="mb-3">
+      <div className={`card border shadow-sm ${isDragging ? "border-primary" : ""}`}>
+        <div className="card-header bg-light d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div className="d-flex align-items-center flex-wrap gap-2 flex-grow-1">
+            {/* Drag Handle */}
+            <div
+              {...attributes}
+              {...listeners}
+              className="cursor-move me-2 text-muted"
+              style={{ cursor: "grab" }}
+            >
+              <i className="bi bi-grip-vertical fs-5"></i>
+            </div>
+            
+            <button
+              className="btn btn-sm btn-link p-0 text-decoration-none"
+              onClick={handleToggle}
+              style={{ minWidth: "24px" }}
+            >
+              <i
+                className={`bi bi-chevron-${
+                  isExpanded ? "down" : "right"
+                } fs-5`}
+              ></i>
+            </button>
+            <strong className="text-primary fs-6">{id}</strong>
+            <span className="badge bg-secondary">{itemCount} alan</span>
+          </div>
+          <div className="d-flex gap-2">
+            <button
+              className="btn btn-sm btn-outline-primary"
+              onClick={handleEdit}
+            >
+              <i className="bi bi-pencil me-1"></i>
+              <span className="d-none d-sm-inline">Düzenle</span>
+            </button>
+            <button
+              className="btn btn-sm btn-outline-danger"
+              onClick={handleDelete}
+            >
+              <i className="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
 }
 
 export default function AdminEslestirmeEditPage() {
@@ -59,6 +161,14 @@ export default function AdminEslestirmeEditPage() {
     levelNumber: "",
     levelGroup: "level2",
   });
+  
+  // Dnd Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     if (docId && typeof docId === "string") {
@@ -500,6 +610,78 @@ export default function AdminEslestirmeEditPage() {
     }
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      // Sıralamayı güncelle
+      const oldIndex = sortedFields.indexOf(active.id as string);
+      const newIndex = sortedFields.indexOf(over?.id as string);
+      
+      // Sadece görsel olarak güncelle (optimistic update)
+      // Gerçek veri fetchDocument ile güncellenecek
+      
+      try {
+        setSaving(true);
+        const idToken = await getValidToken();
+        
+        // Yeni sıralamayı kaydet
+        // Burada sadece yer değiştiren iki öğenin değil, tüm listenin sırasını güncellemek gerekebilir
+        // Veya sadece ilgili öğenin yeni sırasını (order) göndermek
+        
+        // Basitlik için: Sadece sürüklenen öğenin yeni sırasını hesaplayıp gönderelim
+        // Ancak bu, aradaki diğer öğelerin sırasını bozabilir.
+        // En doğrusu: Yeni sıralamadaki tüm level'ların order'ını güncellemek.
+        
+        const newSortedFields = arrayMove(sortedFields, oldIndex, newIndex);
+        
+        // Sadece level olanları filtrele ve yeni order'larını belirle
+        const levelUpdates = newSortedFields
+          .filter(key => key.startsWith("level"))
+          .map((key, index) => ({
+            fieldPath: key,
+            order: index + 1
+          }));
+          
+        // Batch update için backend'e gönder
+        // Backend'de toplu güncelleme endpoint'i olmadığı için tek tek gönderiyoruz (şimdilik)
+        // İdealde: /api/admin/eslestirmeler/[docId]/reorder gibi bir endpoint olmalı
+        
+        // Şimdilik sadece sürüklenen öğenin order'ını güncelleyelim (HACK)
+        // Not: Bu tam çözüm değil, çünkü diğer öğelerin order'ı değişmeyince çakışma olabilir.
+        // Doğru çözüm: Tüm level'ların order'ını güncellemek.
+        
+        const updatePromises = levelUpdates.map(update => 
+          fetch(`/api/admin/eslestirmeler/${encodeURIComponent(docId as string)}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              fieldPath: update.fieldPath,
+              value: { 
+                ...document[update.fieldPath], 
+                order: update.order 
+              }
+            }),
+          })
+        );
+        
+        await Promise.all(updatePromises);
+        
+        toast.success("Sıralama güncellendi");
+        await fetchDocument();
+        
+      } catch (err) {
+        console.error("Sıralama güncellenirken hata:", err);
+        toast.error("Sıralama güncellenemedi");
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
   const renderField = (
     key: string,
     value: any,
@@ -619,6 +801,44 @@ export default function AdminEslestirmeEditPage() {
       }
 
       const keys = Object.keys(value);
+      
+      // Eğer bu bir Level ise (ana dizindeki levelX alanları)
+      // SortableItem kullan, değilse normal kart
+      const isLevel = path === "" && key.startsWith("level");
+
+      if (isLevel) {
+        return (
+          <SortableItem
+            key={key}
+            id={key}
+            handleEdit={() => startEditing(fieldPath, value)}
+            handleDelete={() => deleteField(fieldPath)}
+            handleToggle={() => toggleField(fieldPath)}
+            isExpanded={isExpanded}
+            itemCount={keys.length}
+          >
+            {isExpanded && (
+              <div className="card-body">
+                <div className="row g-2">
+                  {keys.map((k) => {
+                    const rendered = renderField(
+                      k,
+                      value[k],
+                      fieldPath,
+                      depth + 1
+                    );
+                    return rendered ? (
+                      <div key={k} className="col-12">
+                        {rendered}
+                      </div>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
+          </SortableItem>
+        );
+      }
 
       return (
         <div key={key} className="mb-3">
@@ -977,9 +1197,20 @@ export default function AdminEslestirmeEditPage() {
                   </div>
                 ) : (
                   <div className="fields-container">
-                    {filteredFields.map((key) =>
-                      renderField(key, document[key])
-                    )}
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={filteredFields}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {filteredFields.map((key) =>
+                          renderField(key, document[key])
+                        )}
+                      </SortableContext>
+                    </DndContext>
                   </div>
                 )}
               </div>

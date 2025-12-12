@@ -13,6 +13,7 @@ export default function AdminDenemelerYonetimiPage() {
   const [activeTab, setActiveTab] = useState<
     "mevzuat" | "cografya" | "tarih" | "genel"
   >("mevzuat");
+  const [editingDeneme, setEditingDeneme] = useState<any>(null);
 
   const handleCreateSuccess = () => {
     // Sayfa yenilenecek, AdminDenemeTable component'i otomatik olarak yeni listeyi çekecek
@@ -20,10 +21,8 @@ export default function AdminDenemelerYonetimiPage() {
   };
 
   const handleEditClick = (deneme: any) => {
-    // TODO: Düzenleme modalı veya sayfası
-    toast.info(
-      `"${deneme.name}" denemesi düzenleme özelliği henüz hazır değil.`
-    );
+    setEditingDeneme(deneme);
+    setShowCreateModal(true);
   };
 
   return (
@@ -117,7 +116,10 @@ export default function AdminDenemelerYonetimiPage() {
                     denemeType="mevzuat"
                     title=""
                     description=""
-                    onCreateClick={() => setShowCreateModal(true)}
+                    onCreateClick={() => {
+                      setEditingDeneme(null);
+                      setShowCreateModal(true);
+                    }}
                     onEditClick={handleEditClick}
                   />
                 </div>
@@ -129,7 +131,10 @@ export default function AdminDenemelerYonetimiPage() {
                     denemeType="cografya"
                     title=""
                     description=""
-                    onCreateClick={() => setShowCreateModal(true)}
+                    onCreateClick={() => {
+                      setEditingDeneme(null);
+                      setShowCreateModal(true);
+                    }}
                     onEditClick={handleEditClick}
                   />
                 </div>
@@ -141,7 +146,10 @@ export default function AdminDenemelerYonetimiPage() {
                     denemeType="tarih"
                     title=""
                     description=""
-                    onCreateClick={() => setShowCreateModal(true)}
+                    onCreateClick={() => {
+                      setEditingDeneme(null);
+                      setShowCreateModal(true);
+                    }}
                     onEditClick={handleEditClick}
                   />
                 </div>
@@ -153,7 +161,10 @@ export default function AdminDenemelerYonetimiPage() {
                     denemeType="genel"
                     title=""
                     description=""
-                    onCreateClick={() => setShowCreateModal(true)}
+                    onCreateClick={() => {
+                      setEditingDeneme(null);
+                      setShowCreateModal(true);
+                    }}
                     onEditClick={handleEditClick}
                   />
                 </div>
@@ -166,9 +177,13 @@ export default function AdminDenemelerYonetimiPage() {
       {/* Deneme Oluşturma Modalı */}
       <CreateDenemeModal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => {
+          setShowCreateModal(false);
+          setEditingDeneme(null);
+        }}
         onSuccess={handleCreateSuccess}
         denemeType={activeTab}
+        initialData={editingDeneme}
       />
     </AdminGuard>
   );

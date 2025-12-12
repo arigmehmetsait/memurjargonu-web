@@ -57,12 +57,14 @@ export const DENEME_COLLECTIONS = {
 } as const;
 
 // API endpoint'leri
+// API endpoint'leri
 export const DENEME_API_ENDPOINTS = {
   mevzuat: {
     list: "/api/denemeler/list",
     sorular: (denemeId: string) => `/api/denemeler/${denemeId}/sorular`,
     admin: {
       create: "/api/admin/denemeler/create",
+      update: "/api/admin/denemeler/update",
       delete: (denemeId: string) =>
         `/api/admin/denemeler/delete?denemeId=${denemeId}`,
     },
@@ -73,6 +75,7 @@ export const DENEME_API_ENDPOINTS = {
       `/api/cografya-denemeler/${denemeId}/sorular`,
     admin: {
       create: "/api/admin/cografya-denemeler/create",
+      update: "/api/admin/cografya-denemeler/update",
       delete: (denemeId: string) =>
         `/api/admin/cografya-denemeler/delete?denemeId=${denemeId}`,
     },
@@ -82,6 +85,7 @@ export const DENEME_API_ENDPOINTS = {
     sorular: (denemeId: string) => `/api/tarih-denemeler/${denemeId}/sorular`,
     admin: {
       create: "/api/admin/tarih-denemeler/create",
+      update: "/api/admin/tarih-denemeler/update",
       delete: (denemeId: string) =>
         `/api/admin/tarih-denemeler/delete?denemeId=${denemeId}`,
     },
@@ -91,6 +95,7 @@ export const DENEME_API_ENDPOINTS = {
     sorular: (denemeId: string) => `/api/genel-denemeler/${denemeId}/sorular`,
     admin: {
       create: "/api/admin/genel-denemeler/create",
+      update: "/api/admin/genel-denemeler/update",
       delete: (denemeId: string) =>
         `/api/admin/genel-denemeler/delete?denemeId=${denemeId}`,
     },
@@ -100,6 +105,7 @@ export const DENEME_API_ENDPOINTS = {
     sorular: (denemeId: string) => `/api/dogru-yanlis/${denemeId}/sorular`,
     admin: {
       create: "/api/admin/dogru-yanlis/create",
+      update: "/api/admin/dogru-yanlis/update", // Placeholder if needed
       delete: (denemeId: string) =>
         `/api/admin/dogru-yanlis/delete?denemeId=${denemeId}`,
     },
