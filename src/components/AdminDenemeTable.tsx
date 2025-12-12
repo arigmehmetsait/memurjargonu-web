@@ -30,7 +30,7 @@ export default function AdminDenemeTable({
   const [error, setError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [denemeToDelete, setDenemeToDelete] = useState<Deneme | null>(null);
-  const [deleting, setDeleting] = useState(false);
+
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -42,6 +42,7 @@ export default function AdminDenemeTable({
 
   useEffect(() => {
     fetchDenemeler();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [denemeType, currentPage, pageSize]);
 
   const fetchDenemeler = async () => {
@@ -95,7 +96,6 @@ export default function AdminDenemeTable({
     if (!denemeToDelete) return;
 
     try {
-      setDeleting(true);
       const response = await fetch(deleteEndpoint(denemeToDelete.id), {
         method: "DELETE",
       });
@@ -118,8 +118,6 @@ export default function AdminDenemeTable({
     } catch (err) {
       console.error("Deneme silme hatası:", err);
       toast.error("Deneme silinirken bir hata oluştu");
-    } finally {
-      setDeleting(false);
     }
   };
 

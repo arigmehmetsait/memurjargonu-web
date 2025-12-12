@@ -57,7 +57,7 @@ export default function CreateDenemeModal({
   };
 
   const getApiEndpoint = () => {
-    // @ts-ignore - update endpoint'i eklendi ama tip hatası alabiliriz
+    // @ts-expect-error - update endpoint'i eklendi ama tip hatası alabiliriz
     const endpoints = DENEME_API_ENDPOINTS[denemeType];
     return isEditing ? endpoints.admin.update : endpoints.admin.create;
   };
