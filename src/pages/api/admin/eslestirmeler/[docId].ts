@@ -76,34 +76,38 @@ export default async function handler(
       // Eğer level oluşturuluyor veya güncelleniyorsa, otomatik order ekle
       let finalValue = value;
       if (fieldPath.startsWith("level") && typeof value === "object" && value !== null) {
-        const doc = await docRef.get();
-        const docData = (doc.exists ? doc.data() : {}) as Record<string, any>;
-        
-        // Mevcut level'ları bul ve en yüksek order'ı hesapla
-        let maxOrder = 0;
-        Object.keys(docData).forEach((key) => {
-          if (key.startsWith("level") && docData[key] && typeof docData[key] === "object") {
-            const levelOrder = docData[key].order;
-            if (typeof levelOrder === "number" && levelOrder > maxOrder) {
-              maxOrder = levelOrder;
-            }
-          }
-        });
-        
-        // Eğer bu level zaten varsa ve order'ı varsa, order'ı koru
-        const existingLevel = docData[fieldPath];
-        if (existingLevel && typeof existingLevel === "object" && typeof existingLevel.order === "number") {
-          // Mevcut order'ı koru
-          finalValue = {
-            ...value,
-            order: existingLevel.order,
-          };
+        // Eğer gelen veride order varsa, onu kullan (sıralama güncellemesi için)
+        if (typeof value.order === "number") {
+          finalValue = value;
         } else {
-          // Yeni level için order = maxOrder + 1
-          finalValue = {
-            ...value,
-            order: maxOrder + 1,
-          };
+          // Order yoksa, mevcut order'ı koru veya yeni order ata
+          const doc = await docRef.get();
+          const docData = (doc.exists ? doc.data() : {}) as Record<string, any>;
+          
+          const existingLevel = docData[fieldPath];
+          if (existingLevel && typeof existingLevel === "object" && typeof existingLevel.order === "number") {
+            // Mevcut order'ı koru
+            finalValue = {
+              ...value,
+              order: existingLevel.order,
+            };
+          } else {
+            // Yeni level için order = maxOrder + 1
+            let maxOrder = 0;
+            Object.keys(docData).forEach((key) => {
+              if (key.startsWith("level") && docData[key] && typeof docData[key] === "object") {
+                const levelOrder = docData[key].order;
+                if (typeof levelOrder === "number" && levelOrder > maxOrder) {
+                  maxOrder = levelOrder;
+                }
+              }
+            });
+            
+            finalValue = {
+              ...value,
+              order: maxOrder + 1,
+            };
+          }
         }
       }
 
