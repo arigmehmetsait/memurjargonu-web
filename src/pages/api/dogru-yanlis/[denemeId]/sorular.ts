@@ -49,6 +49,7 @@ export default async function handler(
       // Resimdeki modele göre sadece text ve correct alanları
       const soruText = data.text || "Soru metni bulunamadı";
       const correctAnswer = data.correct || "Cevap bulunamadı";
+      const description = data.description || "";
 
       // Firebase'den gelen veriyi frontend formatına çevir
       const soru = {
@@ -57,7 +58,7 @@ export default async function handler(
         cevap: correctAnswer,
         secenekler: ["Doğru", "Yanlış"],
         dogruSecenek: 0, // Varsayılan değer
-        aciklama: "",
+        aciklama: description,
         zorluk: "orta",
         konu: "Doğru-Yanlış",
         createdAt: null,

@@ -44,13 +44,14 @@ export default async function handler(
         // Resimdeki modele göre sadece text ve correct alanları
         const soruText = data.text || "";
         const correctAnswer = data.correct || "";
+        const description = data.description || "";
         return {
           id: doc.id,
           soru: soruText,
           cevap: correctAnswer,
           secenekler: ["Doğru", "Yanlış"],
           dogruSecenek: correctAnswer === "Doğru" ? 0 : 1,
-          aciklama: "",
+          aciklama: description,
           zorluk: "orta",
           konu: "Doğru-Yanlış",
           createdAt: null,
@@ -90,6 +91,7 @@ export default async function handler(
       // Resimdeki modele göre sadece text ve correct alanları
       const text = req.body.text;
       const correct = req.body.correct;
+      const description = req.body.description || "";
 
       if (!text || !text.trim()) {
         return res.status(400).json({
@@ -131,6 +133,7 @@ export default async function handler(
       const soruData = {
         text: text.trim(),
         correct: correct,
+        description: description.trim(),
       };
 
       // Soruyu ekle
@@ -209,7 +212,9 @@ export default async function handler(
         success: true,
         data: {
           id: soruId,
-          ...soruData,
+          soru: soruData.text,
+          cevap: soruData.correct,
+          aciklama: soruData.description,
         },
         message: "Soru başarıyla eklendi",
       });

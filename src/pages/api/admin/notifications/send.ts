@@ -168,7 +168,7 @@ export default async function handler(
       },
       data: {
         redirectUrl: redirectUrl || "/",
-        click_action: redirectUrl || "/",
+        // Flutter uygulaması bu data'yı okuyacak
       },
       webpush: {
         fcmOptions: {
@@ -179,7 +179,7 @@ export default async function handler(
         priority: "high" as const,
         notification: {
           sound: "default",
-          clickAction: redirectUrl || "/",
+          clickAction: "FLUTTER_NOTIFICATION_CLICK",
         },
       },
       apns: {

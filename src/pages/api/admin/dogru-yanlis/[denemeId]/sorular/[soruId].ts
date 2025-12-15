@@ -28,6 +28,7 @@ export default async function handler(
       // Resimdeki modele göre sadece text ve correct alanları
       const text = req.body.text;
       const correct = req.body.correct;
+      const description = req.body.description || "";
 
       if (!text || !text.trim()) {
         return res.status(400).json({
@@ -75,6 +76,7 @@ export default async function handler(
       const updatedSoruData = {
         text: text.trim(),
         correct: correct,
+        description: description.trim(),
       };
 
       // Soruyu güncelle
@@ -91,7 +93,9 @@ export default async function handler(
         success: true,
         data: {
           id: soruId,
-          ...updatedSoruData,
+          soru: updatedSoruData.text,
+          cevap: updatedSoruData.correct,
+          aciklama: updatedSoruData.description,
         },
         message: "Soru başarıyla güncellendi",
       });
