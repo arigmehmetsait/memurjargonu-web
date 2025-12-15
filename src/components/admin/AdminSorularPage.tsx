@@ -428,6 +428,8 @@ export default function AdminSorularPage({
         requestBody = {
           text: editForm.soru.trim(),
           correct: editForm.dogruSecenek === 0 ? "Doğru" : "Yanlış",
+          description: editForm.aciklama?.trim() || "",
+          subject: editForm.konu?.trim() || config.defaultKonu,
         };
       } else if (denemeType === "boslukdoldurma") {
         const trimmedOptions = editForm.secenekler
@@ -440,7 +442,7 @@ export default function AdminSorularPage({
           questionText: editForm.soru.trim(),
           correctAnswer,
           options: trimmedOptions,
-          explanation: editForm.aciklama?.trim() || "",
+          description: editForm.aciklama?.trim() || "",
           difficulty: editForm.zorluk,
           subject: editForm.konu?.trim() || config.defaultKonu,
         };
@@ -468,7 +470,7 @@ export default function AdminSorularPage({
           questionText: editForm.soru.trim(),
           correctAnswer: correctAnswerWithPrefix,
           options: optionsWithPrefix,
-          explanation: editForm.aciklama?.trim() || "",
+          description: editForm.aciklama?.trim() || "",
           difficulty: editForm.zorluk,
           subject: editForm.konu?.trim() || config.defaultKonu,
         };
@@ -625,13 +627,14 @@ export default function AdminSorularPage({
           text: trimmedSoru,
           correct: newSoruForm.dogruSecenek === 0 ? "Doğru" : "Yanlış",
           subject: trimmedKonu,
+          description: trimmedAciklama,
         };
       } else if (denemeType === "boslukdoldurma") {
         requestBody = {
           questionText: trimmedSoru,
           correctAnswer: selectedOption,
           options: filledSecenekler,
-          explanation: trimmedAciklama,
+          description: trimmedAciklama,
           difficulty: newSoruForm.zorluk,
           subject: trimmedKonu,
         };
@@ -655,7 +658,7 @@ export default function AdminSorularPage({
           questionText: trimmedSoru,
           correctAnswer: correctAnswerWithPrefix,
           options: optionsWithPrefix,
-          explanation: trimmedAciklama || "",
+          description: trimmedAciklama || "",
           difficulty: newSoruForm.zorluk,
           subject: trimmedKonu,
         };

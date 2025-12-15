@@ -67,7 +67,7 @@ export default async function handler(
       const finalOptions = options || secenekler || [];
       const finalExplanation = explanation || aciklama || "";
       const finalDifficulty = difficulty || zorluk || "orta";
-      const finalSubject = subject || konu || "Güncel Bilgiler";
+      const finalSubject = subject || konu || "Coğrafya";
 
       if (!finalQuestionText.trim()) {
         return res.status(400).json({
@@ -77,17 +77,17 @@ export default async function handler(
       }
 
       // Deneme dokümanını kontrol et
-      const denemeRef = adminDb.collection("denemeler").doc(denemeId);
+      const denemeRef = adminDb.collection("RealCografyaDenemeler").doc(denemeId);
       const denemeDoc = await denemeRef.get();
 
       if (!denemeDoc.exists) {
         return res.status(404).json({
           success: false,
-          error: "Deneme bulunamadı",
+          error: "Coğrafya denemesi bulunamadı",
         });
       }
 
-      // Soru dokümanını kontrol et (güncel bilgiler yapısı: soru1 koleksiyonu)
+      // Soru dokümanını kontrol et (coğrafya yapısı: soru1 koleksiyonu)
       const soruRef = denemeRef.collection("soru1").doc(soruId);
       const soruDoc = await soruRef.get();
 
@@ -118,7 +118,7 @@ export default async function handler(
         message: "Soru başarıyla güncellendi",
       });
     } catch (error) {
-      console.error("Soru güncelleme hatası:", error);
+      console.error("Coğrafya soru güncelleme hatası:", error);
       res.status(500).json({
         success: false,
         error: "Soru güncellenemedi",
@@ -129,21 +129,21 @@ export default async function handler(
     // Soru sil
     try {
       // Deneme dokümanını kontrol et
-      const denemeRef = adminDb.collection("denemeler").doc(denemeId);
+      const denemeRef = adminDb.collection("RealCografyaDenemeler").doc(denemeId);
       const denemeDoc = await denemeRef.get();
 
       if (!denemeDoc.exists) {
         return res.status(404).json({
           success: false,
-          error: "Deneme bulunamadı",
+          error: "Coğrafya denemesi bulunamadı",
         });
       }
 
-      // Soru dokümanını sil (güncel bilgiler yapısı: soru1 koleksiyonu)
+      // Soru dokümanını sil (coğrafya yapısı: soru1 koleksiyonu)
       const soruRef = denemeRef.collection("soru1").doc(soruId);
       await soruRef.delete();
 
-      // Deneme soru sayısını güncelle (güncel bilgiler yapısı: soru1 koleksiyonu)
+      // Deneme soru sayısını güncelle (coğrafya yapısı: soru1 koleksiyonu)
       const sorularSnapshot = await denemeRef.collection("soru1").get();
       await denemeRef.update({
         soruSayisi: sorularSnapshot.size,
@@ -155,7 +155,7 @@ export default async function handler(
         message: "Soru başarıyla silindi",
       });
     } catch (error) {
-      console.error("Soru silme hatası:", error);
+      console.error("Coğrafya soru silme hatası:", error);
       res.status(500).json({
         success: false,
         error: "Soru silinemedi",

@@ -40,17 +40,17 @@ export default async function handler(
     // Soruları listele
     try {
       // Deneme dokümanını kontrol et
-      const denemeRef = adminDb.collection("denemeler").doc(denemeId);
+      const denemeRef = adminDb.collection("RealCografyaDenemeler").doc(denemeId);
       const denemeDoc = await denemeRef.get();
 
       if (!denemeDoc.exists) {
         return res.status(404).json({
           success: false,
-          error: "Deneme bulunamadı",
+          error: "Coğrafya denemesi bulunamadı",
         });
       }
 
-      // Sorular alt koleksiyonunu getir (güncel bilgiler yapısı: soru1 koleksiyonu)
+      // Sorular alt koleksiyonunu getir (coğrafya yapısı: soru1 koleksiyonu)
       const sorularSnapshot = await denemeRef.collection("soru1").get();
 
       const sorular = sorularSnapshot.docs.map((doc) => {
@@ -76,7 +76,7 @@ export default async function handler(
           dogruSecenek,
           aciklama: data.explanation || "",
           zorluk: data.difficulty || "orta",
-          konu: data.subject || "Güncel Bilgiler",
+          konu: data.subject || "Coğrafya",
           createdAt: data.createdAt?.toDate?.() || data.createdAt,
           updatedAt: data.updatedAt?.toDate?.() || data.updatedAt,
           status: data.status || "active",
@@ -100,7 +100,7 @@ export default async function handler(
         },
       });
     } catch (error) {
-      console.error("Sorular listesi alınırken hata:", error);
+      console.error("Coğrafya soruları listesi alınırken hata:", error);
       res.status(500).json({
         success: false,
         error: "Sorular listesi alınamadı",
@@ -131,7 +131,7 @@ export default async function handler(
       const finalOptions = options || secenekler || [];
       const finalExplanation = explanation || aciklama || "";
       const finalDifficulty = difficulty || zorluk || "orta";
-      const finalSubject = subject || konu || "Güncel Bilgiler";
+      const finalSubject = subject || konu || "Coğrafya";
 
       if (!finalQuestionText.trim()) {
         return res.status(400).json({
@@ -155,17 +155,17 @@ export default async function handler(
       }
 
       // Deneme dokümanını kontrol et
-      const denemeRef = adminDb.collection("denemeler").doc(denemeId);
+      const denemeRef = adminDb.collection("RealCografyaDenemeler").doc(denemeId);
       const denemeDoc = await denemeRef.get();
 
       if (!denemeDoc.exists) {
         return res.status(404).json({
           success: false,
-          error: "Deneme bulunamadı",
+          error: "Coğrafya denemesi bulunamadı",
         });
       }
 
-      // Yeni soru ID'si oluştur (güncel bilgiler yapısı: soru1 koleksiyonu)
+      // Yeni soru ID'si oluştur (coğrafya yapısı: soru1 koleksiyonu)
       const sorularSnapshot = await denemeRef.collection("soru1").get();
       const yeniSoruNumarasi = sorularSnapshot.size + 1;
       const soruId = `soru${yeniSoruNumarasi}`;
@@ -185,7 +185,7 @@ export default async function handler(
         status: "active",
       };
 
-      // Soruyu ekle (güncel bilgiler yapısı: soru1 koleksiyonu)
+      // Soruyu ekle (coğrafya yapısı: soru1 koleksiyonu)
       await denemeRef.collection("soru1").doc(soruId).set(soruData);
 
       // Deneme soru sayısını güncelle
@@ -203,7 +203,7 @@ export default async function handler(
         message: "Soru başarıyla eklendi",
       });
     } catch (error) {
-      console.error("Soru ekleme hatası:", error);
+      console.error("Coğrafya soru ekleme hatası:", error);
       res.status(500).json({
         success: false,
         error: "Soru eklenemedi",

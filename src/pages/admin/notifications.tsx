@@ -21,14 +21,56 @@ type NotificationHistory = {
   totalSent: number;
 };
 
+// Yönlendirme Rotaları
+const RedirectRoutes = {
+  "/home": "Ana Sayfa",
+  "/duello": "Düello Başlangıç",
+  "/timedExam": "Süreli Sınavlar",
+  "/matching": "Eşleştirme Oyunu",
+  "/dersler": "Ders Seçimi",
+  "/forum": "Forum",
+  "/studyProgram": "Çalışma Programı",
+  "/statistics": "İstatistikler",
+  "/plans": "Planlar/Paketler",
+} as const;
+
+
+
 export default function NotificationsAdmin() {
   const [formData, setFormData] = useState({
     title: "",
     message: "",
-    redirectUrl: "/",
+    redirectUrl: "/home", // Varsayılan değer
     targetType: "all" as "all" | "specific",
     targetUserIds: [] as string[],
   });
+// ... (rest of the component logic remains the same until the form part)
+
+                        <div className="mb-3">
+                          <label htmlFor="redirectUrl" className="form-label">
+                            Yönlendirme Sayfası
+                          </label>
+                          <select
+                            className="form-select"
+                            id="redirectUrl"
+                            value={formData.redirectUrl}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                redirectUrl: e.target.value,
+                              })
+                            }
+                          >
+                            {Object.entries(RedirectRoutes).map(([url, label]) => (
+                              <option key={url} value={url}>
+                                {label} ({url})
+                              </option>
+                            ))}
+                          </select>
+                          <small className="form-text text-muted">
+                            Bildirime tıklandığında kullanıcı bu sayfaya yönlendirilecek
+                          </small>
+                        </div>
 
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -143,7 +185,7 @@ export default function NotificationsAdmin() {
       setFormData({
         title: "",
         message: "",
-        redirectUrl: "/",
+        redirectUrl: "/home",
         targetType: "all",
         targetUserIds: [],
       });
@@ -335,11 +377,10 @@ export default function NotificationsAdmin() {
 
                         <div className="mb-3">
                           <label htmlFor="redirectUrl" className="form-label">
-                            Yönlendirme URL'i
+                            Yönlendirme Sayfası
                           </label>
-                          <input
-                            type="text"
-                            className="form-control"
+                          <select
+                            className="form-select"
                             id="redirectUrl"
                             value={formData.redirectUrl}
                             onChange={(e) =>
@@ -348,10 +389,15 @@ export default function NotificationsAdmin() {
                                 redirectUrl: e.target.value,
                               })
                             }
-                            placeholder="/ veya /plans gibi"
-                          />
+                          >
+                            {Object.entries(RedirectRoutes).map(([url, label]) => (
+                              <option key={url} value={url}>
+                                {label} ({url})
+                              </option>
+                            ))}
+                          </select>
                           <small className="form-text text-muted">
-                            Bildirime tıklandığında yönlendirilecek sayfa
+                            Bildirime tıklandığında kullanıcı bu sayfaya yönlendirilecek
                           </small>
                         </div>
 
