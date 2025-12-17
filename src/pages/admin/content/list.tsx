@@ -209,33 +209,24 @@ export default function PDFList() {
         }
       }
 
-      const url =
-        pdfToEdit.subcategory === PDFSubcategory.TARIH
-          ? `/api/admin/pdf-files/${pdfToEdit.id}`
-          : "/api/admin/content/update";
+      const url = "/api/admin/content/update";
 
-      const body =
-        pdfToEdit.subcategory === PDFSubcategory.TARIH
-          ? {
-              title: editFormData.title.trim(),
-              pdfUrl: pdfUrl,
-            }
-          : {
-              subcategory: pdfToEdit.subcategory,
-              pdfId: pdfToEdit.id,
-              title: editFormData.title.trim(),
-              description: editFormData.description || "",
-              visibleInPackages: editFormData.visibleInPackages || [],
-              isPremiumOnly: editFormData.isPremiumOnly || false,
-              sortOrder: editFormData.sortOrder || 1,
-              tags: editFormData.tags || [],
-              status: editFormData.status || PDFStatus.DRAFT,
-              ...(newPdfFile && {
-                pdfUrl: pdfUrl,
-                fileName: fileName,
-                fileSize: fileSize,
-              }),
-            };
+      const body = {
+        subcategory: pdfToEdit.subcategory,
+        pdfId: pdfToEdit.id,
+        title: editFormData.title.trim(),
+        description: editFormData.description || "",
+        visibleInPackages: editFormData.visibleInPackages || [],
+        isPremiumOnly: editFormData.isPremiumOnly || false,
+        sortOrder: editFormData.sortOrder || 1,
+        tags: editFormData.tags || [],
+        status: editFormData.status || PDFStatus.DRAFT,
+        ...(newPdfFile && {
+          pdfUrl: pdfUrl,
+          fileName: fileName,
+          fileSize: fileSize,
+        }),
+      };
 
       const response = await fetch(url, {
         method: "PUT",
@@ -490,11 +481,7 @@ export default function PDFList() {
     try {
       const idToken = await getValidToken(); // Cache'li token
 
-      // Tarih kategorisi için farklı endpoint
-      const url =
-        pdfToDelete.subcategory === PDFSubcategory.TARIH
-          ? `/api/admin/pdf-files/${pdfToDelete.id}`
-          : "/api/admin/content/delete";
+      const url = "/api/admin/content/delete";
 
       const response = await fetch(url, {
         method: "DELETE",
@@ -502,13 +489,10 @@ export default function PDFList() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${idToken}`,
         },
-        body:
-          pdfToDelete.subcategory === PDFSubcategory.TARIH
-            ? undefined
-            : JSON.stringify({
-                subcategory: pdfToDelete.subcategory,
-                pdfId: pdfToDelete.id,
-              }),
+        body: JSON.stringify({
+          subcategory: pdfToDelete.subcategory,
+          pdfId: pdfToDelete.id,
+        }),
       });
 
       if (response.ok) {
@@ -676,15 +660,11 @@ export default function PDFList() {
                     </button>
                   )}
                   <Link
-                    href={
-                      subcategoryFilter === PDFSubcategory.TARIH
-                        ? "/admin/pdf-files/new"
-                        : `/admin/content/add-pdf${
-                            subcategoryFilter
-                              ? `?subcategory=${subcategoryFilter}`
-                              : ""
-                          }`
-                    }
+                    href={`/admin/content/add-pdf${
+                      subcategoryFilter
+                        ? `?subcategory=${subcategoryFilter}`
+                        : ""
+                    }`}
                     className="btn btn-primary"
                   >
                     <i className="bi bi-plus-circle me-2"></i>
@@ -724,15 +704,11 @@ export default function PDFList() {
                           : "Bu kategoride henüz PDF bulunmuyor."}
                       </p>
                       <Link
-                        href={
-                          subcategoryFilter === PDFSubcategory.TARIH
-                            ? "/admin/pdf-files/new"
-                            : `/admin/content/add-pdf${
-                                subcategoryFilter
-                                  ? `?subcategory=${subcategoryFilter}`
-                                  : ""
-                              }`
-                        }
+                        href={`/admin/content/add-pdf${
+                          subcategoryFilter
+                            ? `?subcategory=${subcategoryFilter}`
+                            : ""
+                        }`}
                         className="btn btn-primary"
                       >
                         <i className="bi bi-plus-circle me-2"></i>
@@ -801,24 +777,6 @@ export default function PDFList() {
                                   >
                                     <i className="bi bi-eye"></i>
                                   </a>
-                                  {pdf.subcategory === PDFSubcategory.TARIH ? (
-                                    <>
-                                      <Link
-                                        href={`/admin/pdf-files/${pdf.id}`}
-                                        className="btn btn-outline-primary"
-                                        title="Düzenle"
-                                      >
-                                        <i className="bi bi-pencil"></i>
-                                      </Link>
-                                      <Link
-                                        href={`/admin/pdf-files/${pdf.id}/questions`}
-                                        className="btn btn-outline-secondary"
-                                        title="Soruları Yönet"
-                                      >
-                                        <i className="bi bi-question-circle"></i>
-                                      </Link>
-                                    </>
-                                  ) : (
                                     <>
                                       <button
                                         className="btn btn-outline-primary"
@@ -828,12 +786,17 @@ export default function PDFList() {
                                         <i className="bi bi-pencil"></i>
                                       </button>
                                       <Link
-                                        href={`/admin/content/pdfs/${pdf.id}/questions?subcategory=${pdf.subcategory}`}
+                                        href={
+                                          pdf.subcategory === PDFSubcategory.TARIH
+                                            ? `/admin/pdf-files/${pdf.id}/questions`
+                                            : `/admin/content/pdfs/${pdf.id}/questions?subcategory=${pdf.subcategory}`
+                                        }
                                         className="btn btn-outline-secondary"
                                         title="Soruları Yönet"
                                       >
                                         <i className="bi bi-question-circle"></i>
                                       </Link>
+                                    </>
                                       <button
                                         className={`btn ${
                                           pdf.status === PDFStatus.ACTIVE
@@ -855,8 +818,6 @@ export default function PDFList() {
                                           }`}
                                         ></i>
                                       </button>
-                                    </>
-                                  )}
                                   <button
                                     className="btn btn-outline-danger"
                                     onClick={() => handleDeleteClick(pdf)}
@@ -982,8 +943,7 @@ export default function PDFList() {
                   />
                 </div>
 
-                {pdfToEdit.subcategory !== PDFSubcategory.TARIH && (
-                  <>
+
                     <div className="mb-3">
                       <label className="form-label">Durum</label>
                       <select
@@ -1098,8 +1058,7 @@ export default function PDFList() {
                         placeholder="etiket1, etiket2, etiket3"
                       />
                     </div>
-                  </>
-                )}
+
               </div>
               <div className="modal-footer">
                 <button

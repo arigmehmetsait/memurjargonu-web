@@ -120,34 +120,25 @@ export default async function handler(
     const bucket = adminStorage.bucket(storageBucket);
     const file = bucket.file(storagePath);
 
-    // Dosyayı Firebase Storage'a yükle
+    // Token oluştur (UUID)
+    const crypto = require("crypto");
+    const generatedToken = crypto.randomUUID();
+
+    // Dosyayı Firebase Storage'a yükle (metadata ile birlikte)
     const fileBuffer = fs.readFileSync(uploadedFile.filepath);
     await file.save(fileBuffer, {
       metadata: {
         contentType: "application/pdf",
+        metadata: {
+          firebaseStorageDownloadTokens: generatedToken,
+        },
       },
     });
 
-    // Dosyayı public yap (token gerektirmeyen erişim için)
-    await file.makePublic();
-
-    // Token içeren URL'i al (signed URL veya metadata'dan token al)
-    // Firebase Storage'dan token içeren URL'i almak için getSignedUrl kullanıyoruz
-    const [signedUrl] = await file.getSignedUrl({
-      action: "read",
-      expires: "03-09-2491", // Çok uzun süreli (yaklaşık 500 yıl)
-    });
-
-    // Alternatif: Metadata'dan token'ı al ve URL'e ekle
-    const [metadata] = await file.getMetadata();
-    const token = metadata.metadata?.firebaseStorageDownloadTokens;
-
     // Token içeren URL oluştur
-    const pdfUrl = token
-      ? `https://firebasestorage.googleapis.com/v0/b/${
-          bucket.name
-        }/o/${encodeURIComponent(storagePath)}?alt=media&token=${token}`
-      : signedUrl;
+    const pdfUrl = `https://firebasestorage.googleapis.com/v0/b/${
+      bucket.name
+    }/o/${encodeURIComponent(storagePath)}?alt=media&token=${generatedToken}`;
 
     // PDF'i veritabanına kaydet
     const pdfService = new PDFService();

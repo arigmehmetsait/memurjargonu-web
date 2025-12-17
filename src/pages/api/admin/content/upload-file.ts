@@ -76,25 +76,25 @@ export default async function handler(
     const bucket = adminStorage.bucket(storageBucket);
     const file = bucket.file(storagePath);
 
-    // Dosyayı Firebase Storage'a yükle
+    // Token oluştur (UUID)
+    const crypto = require("crypto");
+    const generatedToken = crypto.randomUUID();
+
+    // Dosyayı Firebase Storage'a yükle (metadata ile birlikte)
     const fileBuffer = fs.readFileSync(uploadedFile.filepath);
     await file.save(fileBuffer, {
       metadata: {
         contentType: "application/pdf",
+        metadata: {
+          firebaseStorageDownloadTokens: generatedToken,
+        },
       },
     });
 
-    // Dosyayı public yap
-    await file.makePublic();
-
-    // Token içeren URL'i al
-    const [metadata] = await file.getMetadata();
-    const token = metadata.metadata?.firebaseStorageDownloadTokens;
-
     // Token içeren URL oluştur
-    const pdfUrl = token
-      ? `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(storagePath)}?alt=media&token=${token}`
-      : `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(storagePath)}?alt=media`;
+    const pdfUrl = `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(
+      storagePath
+    )}?alt=media&token=${generatedToken}`;
 
     // Geçici dosyayı temizle
     fs.unlinkSync(uploadedFile.filepath);

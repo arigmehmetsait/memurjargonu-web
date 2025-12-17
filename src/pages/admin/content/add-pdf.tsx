@@ -46,6 +46,13 @@ export default function AddPDF() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
+  const availableSubcategories = getSubcategoriesByCategory(formData.category);
+  const availablePackages = Object.values(PackageType).filter((packageType) => {
+    return formData.category === PDFCategory.AGS
+      ? packageType.startsWith("ags_")
+      : packageType.startsWith("kpss_");
+  });
+
   // URL'den subcategory parametresini al
   useEffect(() => {
     if (router.query.subcategory) {
@@ -156,7 +163,7 @@ export default function AddPDF() {
   const validateForm = (): string | null => {
     if (!formData.title.trim()) return "Başlık zorunludur.";
     if (!selectedFile) return "PDF dosyası seçmeniz gerekir.";
-    if (formData.visibleInPackages.length === 0)
+    if (availablePackages.length > 0 && formData.visibleInPackages.length === 0)
       return "En az bir paket seçmeniz gerekir.";
     if (formData.sortOrder < 1)
       return "Sıra numarası 1 veya daha büyük olmalıdır.";
@@ -250,12 +257,7 @@ export default function AddPDF() {
 
       // 2 saniye sonra ilgili kategori liste sayfasına yönlendir
       setTimeout(() => {
-        const subcategory = formData.subcategory;
-        if (subcategory === PDFSubcategory.TARIH) {
-          router.push("/admin/pdf-files");
-        } else {
-          router.push(`/admin/content/list?subcategory=${subcategory}`);
-        }
+        router.push(`/admin/content/list?subcategory=${formData.subcategory}`);
       }, 2000);
     } catch (error: any) {
       console.error("Upload error:", error);
@@ -267,12 +269,7 @@ export default function AddPDF() {
     }
   };
 
-  const availableSubcategories = getSubcategoriesByCategory(formData.category);
-  const availablePackages = Object.values(PackageType).filter((packageType) => {
-    return formData.category === PDFCategory.AGS
-      ? packageType.startsWith("ags_")
-      : packageType.startsWith("kpss_");
-  });
+
 
   return (
     <AdminGuard>
