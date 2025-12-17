@@ -98,17 +98,17 @@ export class PDFService {
       return {
         id: doc.id,
         title: data.title || "Başlıksız PDF",
-        description: "",
+        description: data.description || "",
         category: PDFCategory.AGS,
         subcategory,
         pdfUrl: data.pdfUrl || "",
-        fileName: data.title || "unknown.pdf",
-        fileSize: 0,
-        visibleInPackages: [],
-        isPremiumOnly: false,
-        status: PDFStatus.ACTIVE,
-        sortOrder: 1,
-        tags: [],
+        fileName: data.fileName || data.title || "unknown.pdf",
+        fileSize: data.fileSize || 0,
+        visibleInPackages: data.visibleInPackages || [],
+        isPremiumOnly: data.isPremiumOnly || false,
+        status: data.status || PDFStatus.ACTIVE,
+        sortOrder: data.sortOrder || 1,
+        tags: data.tags || [],
         createdAt: data.createdAt
           ? data.createdAt.toDate
             ? data.createdAt.toDate()

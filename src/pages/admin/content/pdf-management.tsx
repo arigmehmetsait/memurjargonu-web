@@ -271,11 +271,7 @@ export default function PDFManagement() {
                               PDF'leri Görüntüle ({count})
                             </Link>
                             <Link
-                              href={
-                                subcategory === PDFSubcategory.TARIH
-                                  ? "/admin/pdf-files/new"
-                                  : `/admin/content/add-pdf?subcategory=${subcategory}`
-                              }
+                              href={`/admin/content/add-pdf?subcategory=${subcategory}`}
                               className="btn btn-primary btn-sm"
                             >
                               <i className="bi bi-plus me-1"></i>
