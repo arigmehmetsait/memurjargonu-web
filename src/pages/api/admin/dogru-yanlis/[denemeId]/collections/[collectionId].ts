@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { adminDb } from "@/lib/firebaseAdmin";
+import { FieldValue } from "firebase-admin/firestore";
 
 export default async function handler(
   req: NextApiRequest,
@@ -76,8 +77,58 @@ export default async function handler(
 
       oldCollectionSnapshot.docs.forEach((doc) => {
         batch.set(newCollectionRef.doc(doc.id), doc.data());
+        batch.set(newCollectionRef.doc(doc.id), doc.data());
         batch.delete(oldCollectionRef.doc(doc.id));
       });
+
+      // Konu adını dogruyanlisTopics içinde de güncelle
+      try {
+        let denemeName = denemeDoc.data()?.name;
+        
+        // Deneme ismi yoksa ID'den bul
+        if (!denemeName || !denemeName.trim()) {
+          const idStr = typeof denemeId === "string" ? denemeId : "";
+          if (idStr.startsWith("dogru-yanlis-")) {
+            const namePart = idStr.replace(/^dogru-yanlis-/, "").replace(/-\d+$/, "");
+            denemeName = namePart
+              .split("-")
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(" ");
+          } else {
+            const nameMap: Record<string, string> = {
+              cografya: "Coğrafya",
+              tarih: "Tarih",
+              vatandaslik: "Vatandaşlık",
+              "guncel-bilgiler": "Güncel Bilgiler",
+            };
+            denemeName = nameMap[idStr] || idStr.charAt(0).toUpperCase() + idStr.slice(1);
+          }
+        }
+
+        if (denemeName && denemeName.trim()) {
+          const topicDocRef = adminDb.collection("dogruyanlisTopics").doc(denemeName.trim());
+          const topicDoc = await topicDocRef.get();
+          
+          if (topicDoc.exists) {
+             const data = topicDoc.data();
+             const topics = data?.topics || [];
+             
+             // Listede eski ismi ara
+             const oldIndex = topics.indexOf(collectionId);
+             if (oldIndex !== -1) {
+               // Bulunduysa değiştir
+               const newTopics = [...topics];
+               newTopics[oldIndex] = cleanNewName;
+               batch.update(topicDocRef, { topics: newTopics });
+             } else {
+               // Bulunamadıysa yeni ismi ekle
+               batch.update(topicDocRef, { topics: FieldValue.arrayUnion(cleanNewName) });
+             }
+          }
+        }
+      } catch (topicError) {
+        console.error("Konu güncelleme hatası:", topicError);
+      }
 
       await batch.commit();
 
@@ -134,6 +185,44 @@ export default async function handler(
       collectionSnapshot.docs.forEach((doc) => {
         batch.delete(collectionRef.doc(doc.id));
       });
+
+      // Konuyu dogruyanlisTopics koleksiyonundan sil
+      try {
+        let denemeName = denemeDoc.data()?.name;
+        
+        // Eğer name alanı yoksa, deneme ID'sinden isim çıkar
+        if (!denemeName || !denemeName.trim()) {
+          const idStr = typeof denemeId === "string" ? denemeId : "";
+          if (idStr.startsWith("dogru-yanlis-")) {
+            const namePart = idStr.replace(/^dogru-yanlis-/, "").replace(/-\d+$/, "");
+            denemeName = namePart
+              .split("-")
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(" ");
+          } else {
+            const nameMap: Record<string, string> = {
+              cografya: "Coğrafya",
+              tarih: "Tarih",
+              vatandaslik: "Vatandaşlık",
+              "guncel-bilgiler": "Güncel Bilgiler",
+            };
+            denemeName = nameMap[idStr] || idStr.charAt(0).toUpperCase() + idStr.slice(1);
+          }
+        }
+
+        if (denemeName && denemeName.trim()) {
+          const topicDocRef = adminDb.collection("dogruyanlisTopics").doc(denemeName.trim());
+          const topicDoc = await topicDocRef.get();
+          if (topicDoc.exists) {
+            batch.update(topicDocRef, {
+              topics: FieldValue.arrayRemove(collectionId)
+            });
+          }
+        }
+      } catch (topicError) {
+        console.error("Konu silme hatası:", topicError);
+        // Ana silme işlemi devam etsin
+      }
 
       await batch.commit();
 

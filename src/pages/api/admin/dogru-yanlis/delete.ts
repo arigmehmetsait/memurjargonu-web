@@ -44,6 +44,42 @@ export default async function handler(
       batch.delete(doc.ref);
     });
 
+    // Konuyu dogruyanlisTopics koleksiyonundan sil
+    try {
+      let denemeName = denemeData?.name;
+      
+      // Eğer name alanı yoksa, deneme ID'sinden isim çıkar (sorular.ts ile aynı mantık)
+      if (!denemeName || !denemeName.trim()) {
+        const idStr = typeof denemeId === "string" ? denemeId : "";
+        if (idStr.startsWith("dogru-yanlis-")) {
+          const namePart = idStr.replace(/^dogru-yanlis-/, "").replace(/-\d+$/, "");
+          denemeName = namePart
+            .split("-")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+        } else {
+          const nameMap: Record<string, string> = {
+            cografya: "Coğrafya",
+            tarih: "Tarih",
+            vatandaslik: "Vatandaşlık",
+            "guncel-bilgiler": "Güncel Bilgiler",
+          };
+          denemeName = nameMap[idStr] || idStr.charAt(0).toUpperCase() + idStr.slice(1);
+        }
+      }
+
+      if (denemeName && denemeName.trim()) {
+        const topicDocRef = adminDb.collection("dogruyanlisTopics").doc(denemeName.trim());
+        const topicDoc = await topicDocRef.get();
+        if (topicDoc.exists) {
+            batch.delete(topicDocRef);
+        }
+      }
+    } catch (topicError) {
+      console.error("Konu silme hatası:", topicError);
+      // Ana silme işlemi devam etsin
+    }
+
     // Deneme dokümanını sil
     batch.delete(denemeDoc.ref);
 
