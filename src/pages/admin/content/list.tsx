@@ -8,9 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
 import { useState, useEffect } from "react";
-import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { getValidToken } from "@/utils/tokenCache";
+import { contentService } from "@/services/admin/contentService";
+import { getValidToken } from "@/utils/tokenCache"; // Keep for file upload only
 import {
   PDFDocument,
   PDFCategory,
@@ -59,32 +58,19 @@ export default function PDFList() {
     setMessage(null);
 
     try {
-      const idToken = await getValidToken(); // Cache'li token
-
-      // Query parametrelerini oluştur
-      const params = new URLSearchParams();
-      if (searchQuery.trim()) params.append("query", searchQuery.trim());
-      if (subcategoryFilter) params.append("subcategory", subcategoryFilter);
-      if (statusFilter !== "all") params.append("status", statusFilter);
-      params.append("limit", "50");
-      params.append("sortBy", "updatedAt");
-      params.append("sortOrder", "desc");
-
-      const response = await fetch(`/api/admin/content/list?${params}`, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
+      const response = await contentService.list({
+        query: searchQuery.trim() || undefined,
+        subcategory: subcategoryFilter,
+        status: statusFilter,
+        limit: 50,
+        sortBy: "updatedAt",
+        sortOrder: "desc",
       });
 
-      if (response.ok) {
-        const data: PDFListResponse = await response.json();
-        if (data.success) {
-          setPdfs(data.data.pdfs);
-        } else {
-          setMessage(`❌ ${data.error || "PDF'ler yüklenemedi"}`);
-        }
+      if (response.success) {
+        setPdfs(response.data.pdfs);
       } else {
-        setMessage("❌ PDF'ler yüklenirken hata oluştu");
+        setMessage(`❌ ${response.error || "PDF'ler yüklenemedi"}`);
       }
     } catch (error) {
       console.error("PDF load error:", error);
@@ -100,22 +86,9 @@ export default function PDFList() {
       pdf.status === PDFStatus.ACTIVE ? PDFStatus.INACTIVE : PDFStatus.ACTIVE;
 
     try {
-      const idToken = await getValidToken(); // Cache'li token
+      const response = await contentService.updateStatus(pdf.subcategory, pdf.id || "", newStatus);
 
-      const response = await fetch("/api/admin/content/status", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          subcategory: pdf.subcategory,
-          pdfId: pdf.id,
-          status: newStatus,
-        }),
-      });
-
-      if (response.ok) {
+      if (response.success) {
         setMessage(
           `✅ PDF durumu ${
             newStatus === PDFStatus.ACTIVE ? "aktif" : "pasif"
@@ -123,7 +96,7 @@ export default function PDFList() {
         );
         loadPDFs(); // Listeyi yenile
       } else {
-        setMessage("❌ PDF durumu güncellenirken hata oluştu");
+        setMessage(`❌ ${response.error || "PDF durumu güncellenirken hata oluştu"}`);
       }
     } catch (error) {
       console.error("Status update error:", error);
@@ -479,33 +452,13 @@ export default function PDFList() {
     if (!pdfToDelete) return;
 
     try {
-      const idToken = await getValidToken(); // Cache'li token
+      const response = await contentService.delete(pdfToDelete.subcategory, pdfToDelete.id || "");
 
-      const url = "/api/admin/content/delete";
-
-      const response = await fetch(url, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          subcategory: pdfToDelete.subcategory,
-          pdfId: pdfToDelete.id,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setMessage("✅ PDF başarıyla silindi");
-          loadPDFs(); // Listeyi yenile
-        } else {
-          setMessage(`❌ ${data.error || "PDF silinirken hata oluştu"}`);
-        }
+      if (response.success) {
+        setMessage("✅ PDF başarıyla silindi");
+        loadPDFs(); // Listeyi yenile
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        setMessage(`❌ ${errorData.error || "PDF silinirken hata oluştu"}`);
+        setMessage(`❌ ${response.error || "PDF silinirken hata oluştu"}`);
       }
     } catch (error) {
       console.error("Delete error:", error);

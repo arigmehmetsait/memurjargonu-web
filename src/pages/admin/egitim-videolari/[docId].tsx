@@ -4,7 +4,7 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { getValidToken } from "@/utils/tokenCache";
+import { egitimVideolariService } from "@/services/admin/egitimVideolariService";
 import { toast } from "react-toastify";
 
 interface Video {
@@ -57,23 +57,12 @@ export default function AdminEgitimVideoDetailPage() {
       setLoading(true);
       setError(null);
 
-      const idToken = await getValidToken();
+      const response = await egitimVideolariService.getVideos(docId);
 
-      const response = await fetch(
-        `/api/admin/egitim-videolari/${encodeURIComponent(docId)}/videos`,
-        {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        setVideos(data.data);
+      if (response.success) {
+        setVideos(response.data || []);
       } else {
-        setError(data.error || "Videolar yüklenemedi");
+        setError(response.error || "Videolar yüklenemedi");
       }
     } catch (err) {
       console.error("Videolar yüklenirken hata:", err);
@@ -127,18 +116,8 @@ export default function AdminEgitimVideoDetailPage() {
 
     try {
       setSaving(true);
-      const idToken = await getValidToken();
 
-      const url = editingVideo
-        ? `/api/admin/egitim-videolari/${encodeURIComponent(
-            docId as string
-          )}/videos`
-        : `/api/admin/egitim-videolari/${encodeURIComponent(
-            docId as string
-          )}/videos`;
-
-      const method = editingVideo ? "PUT" : "POST";
-      const body: any = {
+      const videoData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         instructor: formData.instructor.trim(),
@@ -146,22 +125,14 @@ export default function AdminEgitimVideoDetailPage() {
         videoUrl: formData.videoUrl.trim(),
       };
 
+      let response;
       if (editingVideo) {
-        body.videoId = editingVideo.id;
+        response = await egitimVideolariService.updateVideo(docId as string, editingVideo.id, videoData);
+      } else {
+        response = await egitimVideolariService.addVideo(docId as string, videoData);
       }
 
-      const response = await fetch(url, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         setShowAddModal(false);
         setShowEditModal(false);
         resetForm();
@@ -172,7 +143,7 @@ export default function AdminEgitimVideoDetailPage() {
             : "Video başarıyla eklendi!"
         );
       } else {
-        toast.error(data.error || "Video kaydedilemedi");
+        toast.error(response.error || "Video kaydedilemedi");
       }
     } catch (err) {
       console.error("Video kaydetme hatası:", err);
@@ -187,29 +158,15 @@ export default function AdminEgitimVideoDetailPage() {
 
     try {
       setSaving(true);
-      const idToken = await getValidToken();
+      const response = await egitimVideolariService.deleteVideo(docId as string, videoToDelete.id);
 
-      const response = await fetch(
-        `/api/admin/egitim-videolari/${encodeURIComponent(
-          docId as string
-        )}/videos?videoId=${encodeURIComponent(videoToDelete.id)}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         setShowDeleteModal(false);
         setVideoToDelete(null);
         await fetchVideos();
         toast.success("Video başarıyla silindi!");
       } else {
-        toast.error(data.error || "Video silinemedi");
+        toast.error(response.error || "Video silinemedi");
       }
     } catch (err) {
       console.error("Video silme hatası:", err);

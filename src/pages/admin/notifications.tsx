@@ -4,22 +4,10 @@ import AdminGuard from "@/components/AdminGuard";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Breadcrumb from "@/components/Breadcrumb";
-import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { getValidToken } from "@/utils/tokenCache";
+import { notificationsService, NotificationHistory as NotifType } from "@/services/admin/notificationsService";
+import { usersService } from "@/services/admin/usersService";
 import { formatDate } from "@/utils/formatDate";
-
-type NotificationHistory = {
-  id: string;
-  title: string;
-  message: string;
-  redirectUrl: string;
-  targetType: "all" | "specific";
-  targetUserIds: string[];
-  sentAt: number;
-  sentBy: string;
-  totalSent: number;
-};
+type NotificationHistory = NotifType;
 
 // Yönlendirme Rotaları
 const RedirectRoutes = {
@@ -99,27 +87,15 @@ export default function NotificationsAdmin() {
 
     setLoadingUsers(true);
     try {
-      const idToken = await getValidToken();
-      if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
-
-      const response = await fetch(
-        `/api/admin/users/list?q=${encodeURIComponent(query)}&pageSize=10`,
-        {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("Kullanıcılar yüklenemedi");
-
-      const data = await response.json();
-      setAvailableUsers(
-        data.rows?.map((row: any) => ({
-          id: row.id,
-          email: row.email,
-        })) || []
-      );
+      const response = await usersService.list({ q: query, pageSize: 10 });
+      if (response.success) {
+        setAvailableUsers(
+          response.rows?.map((row: any) => ({
+            id: row.id,
+            email: row.email,
+          })) || []
+        );
+      }
     } catch (error) {
       console.error("Error searching users:", error);
     } finally {
@@ -142,9 +118,6 @@ export default function NotificationsAdmin() {
     setMsg(null);
 
     try {
-      const idToken = await getValidToken();
-      if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
-
       const payload = {
         title: formData.title,
         message: formData.message,
@@ -154,25 +127,13 @@ export default function NotificationsAdmin() {
           formData.targetType === "specific" ? selectedUserIds : undefined,
       };
 
-      const response = await fetch("/api/admin/notifications/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify(payload),
-      });
+      const data = await notificationsService.send(payload);
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (!data.success) {
         let errorMessage = data.error || "Bildirim gönderilemedi";
-
-        // Daha detaylı hata mesajı
         if (data.usersWithoutTokens && data.usersWithoutTokens.length > 0) {
           errorMessage += ` (${data.usersWithoutTokens.length} kullanıcının token'ı yok)`;
         }
-
         throw new Error(errorMessage);
       }
 
@@ -213,29 +174,9 @@ export default function NotificationsAdmin() {
 
     setHistoryLoading(true);
     try {
-      const idToken = await getValidToken();
-      if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
-
-      const params = new URLSearchParams({
-        pageSize: "20",
-      });
-
-      if (historyCursor && !reset) {
-        params.append("cursor", historyCursor);
-      }
-
-      const response = await fetch(
-        `/api/admin/notifications/history?${params.toString()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("Geçmiş yüklenemedi");
-
-      const data = await response.json();
+      const cursor = reset ? undefined : (historyCursor || undefined);
+      const data = await notificationsService.getHistory(20, cursor);
+      
       setHistory((prev) =>
         reset ? data.notifications : [...prev, ...data.notifications]
       );

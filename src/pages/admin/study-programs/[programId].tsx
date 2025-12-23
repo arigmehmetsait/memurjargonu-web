@@ -4,8 +4,10 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { getValidToken } from "@/utils/tokenCache";
 import { toast } from "react-toastify";
+import * as XLSX from "xlsx";
+import ExcelImportModal from "@/components/ExcelImportModal";
+import { studyProgramsService } from "@/services/admin/studyProgramsService";
 
 interface StudyProgramItem {
   title: string;
@@ -31,6 +33,96 @@ export default function StudyProgramDetailPage() {
   const [taskModalMode, setTaskModalMode] = useState<"add" | "edit">("add");
   const [taskModalDay, setTaskModalDay] = useState<string>("");
   const [editingTaskIndex, setEditingTaskIndex] = useState<number | null>(null);
+  const [showExcelModal, setShowExcelModal] = useState(false);
+
+  const handleExcelExport = () => {
+    try {
+      const exportData: any[] = [];
+      
+      // Sort days alphabetically or logically effectively
+      const sortedKeys = Object.keys(days).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      
+      sortedKeys.forEach(dayKey => {
+        const tasks = days[dayKey];
+        tasks.forEach(task => {
+          exportData.push({
+            "Gün": dayKey,
+            "Başlık": task.title,
+            "Süre": task.duration
+          });
+        });
+        if (tasks.length === 0) {
+             exportData.push({
+            "Gün": dayKey,
+            "Başlık": "",
+            "Süre": ""
+          });
+        }
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Program");
+      XLSX.writeFile(workbook, `ders-programi-${programId}.xlsx`);
+      toast.success("Excel dosyası indirildi");
+    } catch (error) {
+      console.error("Export hatası:", error);
+      toast.error("Dışa aktarma başarısız oldu");
+    }
+  };
+
+  const handleExcelImport = async (file: File) => {
+    if (!file) return;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+
+      if (!sheetName) {
+        toast.error("Excel dosyasında sayfa bulunamadı");
+        return;
+      }
+
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+        defval: "",
+      });
+
+      const newDays: StudyProgramDays = { ...days };
+
+      rows.forEach((row) => {
+        const normalized: Record<string, any> = {};
+        Object.keys(row).forEach((key) => {
+          normalized[key.trim().toLowerCase()] = row[key];
+        });
+        
+        const dayKeyRaw = normalized["gün"] || normalized["day"] || normalized["gun"] || "";
+        const titleRaw = normalized["başlık"] || normalized["baslik"] || normalized["title"] || "";
+        const durationRaw = normalized["süre"] || normalized["sure"] || normalized["duration"] || "";
+        
+        const dayKey = String(dayKeyRaw).trim();
+        const title = String(titleRaw).trim();
+        const duration = String(durationRaw).trim();
+        
+        if (!dayKey) return;
+        
+        if (!newDays[dayKey]) {
+            newDays[dayKey] = [];
+        }
+        
+        if (title || duration) {
+            newDays[dayKey].push({ title, duration });
+        }
+      });
+
+      setDays(newDays);
+      toast.success("Program verileri içe aktarıldı. Kaydetmeyi unutmayın.");
+    } catch (err) {
+      console.error("Excel import hatası:", err);
+      toast.error("Dosya okunamadı");
+    }
+  };
 
   const orderedDayEntries = useMemo(() => {
     return Object.entries(days).sort(([a], [b]) => a.localeCompare(b));
@@ -47,22 +139,12 @@ export default function StudyProgramDetailPage() {
       setLoading(true);
       setError(null);
 
-      const token = await getValidToken();
-      const response = await fetch(
-        `/api/admin/study-programs/${encodeURIComponent(id)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await studyProgramsService.getById(id);
 
-      const data = await response.json();
-
-      if (data.success) {
-        setDays(data.data?.days || {});
+      if (response.success) {
+        setDays(response.data.days || {});
       } else {
-        setError(data.error || "Program yüklenemedi");
+        setError("Program yüklenemedi");
       }
     } catch (err) {
       console.error("Program yüklenirken hata:", err);
@@ -173,25 +255,14 @@ export default function StudyProgramDetailPage() {
 
     try {
       setSaving(true);
-      const token = await getValidToken();
-      const response = await fetch(
-        `/api/admin/study-programs/${encodeURIComponent(programId)}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ days }),
-        }
-      );
+      
+      const response = await studyProgramsService.update(programId, { days });
 
-      const data = await response.json();
-      if (data.success) {
+      if (response.success) {
         toast.success("Program başarıyla kaydedildi");
         await fetchProgram(programId);
       } else {
-        toast.error(data.error || "Program kaydedilemedi");
+        toast.error(response.message || "Program kaydedilemedi");
       }
     } catch (err) {
       console.error("Program kaydedilirken hata:", err);
@@ -234,6 +305,8 @@ export default function StudyProgramDetailPage() {
     );
   }
 
+
+
   return (
     <AdminGuard>
       <Head>
@@ -258,6 +331,20 @@ export default function StudyProgramDetailPage() {
             </h1>
           </div>
           <div className="d-flex flex-wrap gap-2">
+            <button
+              className="btn btn-outline-success"
+              onClick={handleExcelExport}
+            >
+              <i className="bi bi-file-earmark-excel me-2"></i>
+              Excel Dışa Aktar
+            </button>
+            <button
+              className="btn btn-outline-info"
+              onClick={() => setShowExcelModal(true)}
+            >
+              <i className="bi bi-file-earmark-spreadsheet me-2"></i>
+              Excel İçe Aktar
+            </button>
             <button
               className="btn btn-outline-primary"
               onClick={() => setShowDayModal(true)}
@@ -292,7 +379,7 @@ export default function StudyProgramDetailPage() {
         {orderedDayEntries.length === 0 ? (
           <div className="alert alert-info d-flex align-items-center">
             <i className="bi bi-info-circle me-2"></i>
-            Bu programda henüz gün bulunmuyor. "Yeni Gün Ekle" ile başlayın.
+            Bu programda henüz gün bulunmuyor. "Yeni Gün Ekle" ile başlayın veya Excel'den aktarın.
           </div>
         ) : (
           <div className="row g-4">
@@ -369,7 +456,26 @@ export default function StudyProgramDetailPage() {
         )}
       </main>
 
-      {/* Add Day Modal */}
+      {/* Excel Import Modal */}
+      <ExcelImportModal
+        isOpen={showExcelModal}
+        onClose={() => setShowExcelModal(false)}
+        onFileSelect={handleExcelImport}
+        title="Ders Programı İçe Aktar"
+        description="Excel dosyasında 'Gün', 'Başlık' ve 'Süre' sütunları bulunmalıdır."
+        columns={[
+          { name: "Gün", required: true, description: "Örn: gun1, pazartesi" },
+          { name: "Başlık", required: false, description: "Ders veya aktivite başlığı" },
+          { name: "Süre", required: false, description: "Örn: 30 dk" },
+        ]}
+        exampleData={[
+          { Gün: "gun1", Başlık: "Matematik - Çarpanlar", Süre: "40 dk" },
+          { Gün: "gun1", Başlık: "Türkçe - Paragraf", Süre: "30 soru" },
+          { Gün: "gun2", Başlık: "Tarih - Osmanlı", Süre: "50 dk" },
+        ]}
+      />
+
+      {/* Add Day Modal ... (rest of modals) */}
       {showDayModal && (
         <div
           className="modal show d-block"
@@ -403,6 +509,10 @@ export default function StudyProgramDetailPage() {
                   />
                   <small className="form-text text-muted">
                     Gün anahtarını küçük harf ve boşluksuz girin.
+                  </small>
+                  <br />
+                  <small className="form-text text-muted">
+                    <strong>"Programı Kaydet" butonuna basmayı unutmayın.</strong>
                   </small>
                 </div>
               </div>
@@ -486,6 +596,9 @@ export default function StudyProgramDetailPage() {
                     placeholder="Örn: 30 dk"
                   />
                 </div>
+                <small className="form-text text-muted">
+                  <strong>Ekleme sonunda "Programı Kaydet" butonuna basmayı unutmayın.</strong>
+                </small>
               </div>
               <div className="modal-footer">
                 <button

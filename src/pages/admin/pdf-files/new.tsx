@@ -5,7 +5,7 @@ import { useRouter } from "next/router";
 import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
-import { getValidToken } from "@/utils/tokenCache";
+import { pdfFilesService } from "@/services/admin/pdfFilesService";
 import { toast } from "react-toastify";
 
 export default function NewPDFFilePage() {
@@ -27,29 +27,18 @@ export default function NewPDFFilePage() {
 
     try {
       setLoading(true);
-      const token = await getValidToken();
 
-      const response = await fetch("/api/admin/pdf-files/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: formData.title.trim(),
-          pdfUrl: formData.pdfUrl.trim(),
-          video: formData.video.trim() || "",
-          questions: {},
-        }),
+      const response = await pdfFilesService.create({
+        title: formData.title.trim(),
+        pdfUrl: formData.pdfUrl.trim(),
+        video: formData.video.trim() || undefined,
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         toast.success("PDF dosyası oluşturuldu");
-        router.push(`/admin/pdf-files/${data.data.id}`);
+        router.push(`/admin/pdf-files/${response.id}`);
       } else {
-        toast.error(data.error || "PDF dosyası oluşturulamadı");
+        toast.error(response.error || "PDF dosyası oluşturulamadı");
       }
     } catch (err) {
       console.error("PDF dosyası oluşturma hatası:", err);

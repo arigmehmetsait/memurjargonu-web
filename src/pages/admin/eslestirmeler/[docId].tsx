@@ -5,7 +5,7 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { getValidToken } from "@/utils/tokenCache";
+import { eslestirmelerService } from "@/services/admin/eslestirmelerService";
 import {
   DndContext,
   closestCenter,
@@ -183,23 +183,12 @@ export default function AdminEslestirmeEditPage() {
       setLoading(true);
       setError(null);
 
-      const idToken = await getValidToken();
+      const response = await eslestirmelerService.get(docId);
 
-      const response = await fetch(
-        `/api/admin/eslestirmeler/${encodeURIComponent(docId)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        setDocument(data.data);
+      if (response.success) {
+        setDocument(response.data);
       } else {
-        setError(data.error || "Doküman yüklenemedi");
+        setError(response.error || "Doküman yüklenemedi");
       }
     } catch (err) {
       console.error("Doküman yüklenirken hata:", err);
@@ -340,33 +329,16 @@ export default function AdminEslestirmeEditPage() {
 
       setSaving(true);
 
-      const idToken = await getValidToken();
+      const response = await eslestirmelerService.updateField(docId as string, fieldPath, parsedValue);
 
-      const response = await fetch(
-        `/api/admin/eslestirmeler/${encodeURIComponent(docId as string)}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            fieldPath,
-            value: parsedValue,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         setEditingField(null);
         setFieldValue("");
         setShowEditModal(false);
         await fetchDocument();
         toast.success("Alan başarıyla güncellendi!");
       } else {
-        toast.error(data.error || "Alan güncellenemedi");
+        toast.error(response.error || "Alan güncellenemedi");
       }
     } catch (err) {
       console.error("Alan güncellenirken hata:", err);
@@ -459,31 +431,16 @@ export default function AdminEslestirmeEditPage() {
         }
       }
 
-      const idToken = await getValidToken();
+      const idToken = null; // Not needed anymore
 
       // Yeni soru için fieldPath oluştur
       const finalFieldPath = isNewQuestion
         ? `${questionFormData.levelGroup}.${questionFormData.levelNumber}`
         : editingField;
 
-      const response = await fetch(
-        `/api/admin/eslestirmeler/${encodeURIComponent(docId as string)}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            fieldPath: finalFieldPath,
-            value: questionData,
-          }),
-        }
-      );
+      const response = await eslestirmelerService.updateField(docId as string, finalFieldPath as string, questionData);
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         cancelQuestionModal();
         await fetchDocument();
         toast.success(
@@ -492,7 +449,7 @@ export default function AdminEslestirmeEditPage() {
             : "Soru başarıyla güncellendi!"
         );
       } else {
-        toast.error(data.error || "Soru kaydedilemedi");
+        toast.error(response.error || "Soru kaydedilemedi");
       }
     } catch (err) {
       console.error("Soru güncellenirken hata:", err);
@@ -527,36 +484,20 @@ export default function AdminEslestirmeEditPage() {
 
     try {
       setSaving(true);
-      const idToken = await getValidToken();
 
-      const response = await fetch(
-        `/api/admin/eslestirmeler/${encodeURIComponent(docId as string)}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            fieldPath: cleanLevelName,
-            value: {
-              title: newLevelTitle.trim(),
-              level: levelNum > 0 ? levelNum : undefined,
-            },
-          }),
-        }
-      );
+      const response = await eslestirmelerService.updateField(docId as string, cleanLevelName, {
+        title: newLevelTitle.trim(),
+        level: levelNum > 0 ? levelNum : undefined,
+      });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         setShowLevelModal(false);
         setNewLevelName("");
         setNewLevelTitle("");
         await fetchDocument();
         toast.success("Level başarıyla oluşturuldu!");
       } else {
-        toast.error(data.error || "Level oluşturulamadı");
+        toast.error(response.error || "Level oluşturulamadı");
       }
     } catch (err) {
       console.error("Level oluşturulurken hata:", err);
@@ -576,31 +517,15 @@ export default function AdminEslestirmeEditPage() {
 
     try {
       setSaving(true);
-      const idToken = await getValidToken();
+      const response = await eslestirmelerService.deleteField(docId as string, fieldToDelete);
 
-      const response = await fetch(
-        `/api/admin/eslestirmeler/${encodeURIComponent(docId as string)}`,
-        {
-          method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-          body: JSON.stringify({
-            fieldPath: fieldToDelete,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         await fetchDocument();
         toast.success("Alan başarıyla silindi!");
         setShowDeleteModal(false);
         setFieldToDelete(null);
       } else {
-        toast.error(data.error || "Alan silinemedi");
+        toast.error(response.error || "Alan silinemedi");
       }
     } catch (err) {
       console.error("Alan silinirken hata:", err);
@@ -623,16 +548,8 @@ export default function AdminEslestirmeEditPage() {
       
       try {
         setSaving(true);
-        const idToken = await getValidToken();
         
         // Yeni sıralamayı kaydet
-        // Burada sadece yer değiştiren iki öğenin değil, tüm listenin sırasını güncellemek gerekebilir
-        // Veya sadece ilgili öğenin yeni sırasını (order) göndermek
-        
-        // Basitlik için: Sadece sürüklenen öğenin yeni sırasını hesaplayıp gönderelim
-        // Ancak bu, aradaki diğer öğelerin sırasını bozabilir.
-        // En doğrusu: Yeni sıralamadaki tüm level'ların order'ını güncellemek.
-        
         const newSortedFields = arrayMove(sortedFields, oldIndex, newIndex);
         
         // Sadece level olanları filtrele ve yeni order'larını belirle
@@ -642,29 +559,12 @@ export default function AdminEslestirmeEditPage() {
             fieldPath: key,
             order: index + 1
           }));
-          
-        // Batch update için backend'e gönder
-        // Backend'de toplu güncelleme endpoint'i olmadığı için tek tek gönderiyoruz (şimdilik)
-        // İdealde: /api/admin/eslestirmeler/[docId]/reorder gibi bir endpoint olmalı
         
-        // Şimdilik sadece sürüklenen öğenin order'ını güncelleyelim (HACK)
-        // Not: Bu tam çözüm değil, çünkü diğer öğelerin order'ı değişmeyince çakışma olabilir.
-        // Doğru çözüm: Tüm level'ların order'ını güncellemek.
-        
-        const updatePromises = levelUpdates.map(update => 
-          fetch(`/api/admin/eslestirmeler/${encodeURIComponent(docId as string)}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${idToken}`,
-            },
-            body: JSON.stringify({
-              fieldPath: update.fieldPath,
-              value: { 
-                ...document[update.fieldPath], 
-                order: update.order 
-              }
-            }),
+        // Service layer üzerinden her level'ı güncelle
+        const updatePromises = levelUpdates.map(update =>
+          eslestirmelerService.updateField(docId as string, update.fieldPath, {
+            ...document[update.fieldPath],
+            order: update.order
           })
         );
         

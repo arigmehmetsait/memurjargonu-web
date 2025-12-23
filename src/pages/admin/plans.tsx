@@ -2,18 +2,8 @@
 import AdminGuard from "@/components/AdminGuard";
 import CustomModal from "@/components/CustomModal";
 import ConfirmModal from "@/components/ConfirmModal";
-import { db, auth } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  doc,
-  updateDoc,
-  addDoc,
-  deleteDoc,
-  query,
-  orderBy,
-} from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { plansService, Plan } from "@/services/admin/plansService";
 import Link from "next/link";
 import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
 import { PACKAGE_INFO, PACKAGE_CATEGORIES } from "@/constants/packages";
@@ -21,17 +11,7 @@ import { PackageType } from "@/types/package";
 import Header from "@/components/Header";
 import { getValidToken } from "@/utils/tokenCache";
 
-type Plan = {
-  id: string;
-  name: string;
-  price: number;
-  currency: string;
-  periodMonths: number;
-  isActive: boolean;
-  index: number;
-  key: string;
-  images?: string[];
-};
+
 
 export default function PlansAdmin() {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -115,12 +95,13 @@ export default function PlansAdmin() {
   const load = async () => {
     try {
       setLoading(true);
-      // Token gereksiz - Firestore direkt auth kullanır
-      const snap = await getDocs(
-        query(collection(db, "plans"), orderBy("index", "asc"))
-      );
-      setPlans(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
-      setMsg(null);
+      const response = await plansService.getAll();
+      if (response.success) {
+        setPlans(response.data);
+        setMsg(null);
+      } else {
+        setMsg(response.error || "Planlar yüklenemedi");
+      }
     } catch (e: any) {
       setMsg(`Listeleme hatası: ${e?.message || e}`);
       console.error("plans list error", e);
@@ -136,10 +117,13 @@ export default function PlansAdmin() {
   const toggleActive = async (p: Plan) => {
     try {
       setMsg("Güncelleniyor…");
-      // Token gereksiz - Firestore direkt auth kullanır
-      await updateDoc(doc(db, "plans", p.id), { isActive: !p.isActive });
-      await load();
-      setMsg("Güncellendi ✅");
+      const response = await plansService.update(p.id, { isActive: !p.isActive });
+      if (response.success) {
+        await load();
+        setMsg("Güncellendi ✅");
+      } else {
+        setMsg(`Hata: ${response.error || "Güncelleme başarısız"}`);
+      }
     } catch (e: any) {
       setMsg(`Hata: ${e?.message || e}`);
     }
@@ -150,10 +134,14 @@ export default function PlansAdmin() {
       const price = Number(priceStr);
       if (Number.isNaN(price)) return setMsg("Geçersiz fiyat");
       setMsg("Fiyat güncelleniyor…");
-      // Token gereksiz - Firestore direkt auth kullanır
-      await updateDoc(doc(db, "plans", p.id), { price });
-      await load();
-      setMsg("Güncellendi ✅");
+      
+      const response = await plansService.update(p.id, { price });
+      if (response.success) {
+        await load();
+        setMsg("Güncellendi ✅");
+      } else {
+        setMsg(`Hata: ${response.error || "Fiyat güncellenemedi"}`);
+      }
     } catch (e: any) {
       setMsg(`Hata: ${e?.message || e}`);
     }
@@ -192,30 +180,34 @@ export default function PlansAdmin() {
       }
 
       setMsg("Plan ekleniyor…");
-      // Token gereksiz - Firestore direkt auth kullanır
-      await addDoc(collection(db, "plans"), {
+      
+      const response = await plansService.create({
         key: newPlan.key,
         name: newPlan.name,
         price: newPlan.price,
         currency: newPlan.currency,
         periodMonths: newPlan.periodMonths,
-        isActive: false,
-        index: (plans.at(-1)?.index ?? 0) + 1,
         features: newPlan.features,
         images: newPlan.images || [],
+        index: (plans.at(-1)?.index ?? 0) + 1,
       });
-      await load();
-      setMsg("Plan başarıyla eklendi ✅");
-      setIsAddModalOpen(false);
-      setNewPlan({
-        name: "",
-        price: 0,
-        currency: "TRY",
-        periodMonths: 1,
-        key: "",
-        features: [],
-        images: [],
-      });
+
+      if (response.success) {
+        await load();
+        setMsg("Plan başarıyla eklendi ✅");
+        setIsAddModalOpen(false);
+        setNewPlan({
+          name: "",
+          price: 0,
+          currency: "TRY",
+          periodMonths: 1,
+          key: "",
+          features: [],
+          images: [],
+        });
+      } else {
+        setMsg(response.error || "Plan eklenemedi");
+      }
     } catch (e: any) {
       setMsg(`Hata: ${e?.message || e}`);
     }
@@ -256,10 +248,13 @@ export default function PlansAdmin() {
   const deletePlan = async (plan: Plan) => {
     try {
       setMsg("Plan siliniyor…");
-      // Token gereksiz - Firestore direkt auth kullanır
-      await deleteDoc(doc(db, "plans", plan.id));
-      await load();
-      setMsg("Plan başarıyla silindi ✅");
+      const response = await plansService.delete(plan.id);
+      if (response.success) {
+        await load();
+        setMsg("Plan başarıyla silindi ✅");
+      } else {
+        setMsg(`Hata: ${response.error || "Plan silinemedi"}`);
+      }
     } catch (e: any) {
       setMsg(`Hata: ${e?.message || e}`);
     }
@@ -304,25 +299,13 @@ export default function PlansAdmin() {
     isEdit: boolean = false
   ): Promise<string | null> => {
     try {
-      const idToken = await getValidToken();
-      const formData = new FormData();
-      formData.append("image", file);
+      const response = await plansService.uploadImage(file);
 
-      const response = await fetch("/api/admin/plans/upload-image", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Resim yüklenemedi");
+      if (response.success && response.data) {
+        return response.data.imageUrl;
+      } else {
+        throw new Error(response.error || "Resim yüklenemedi");
       }
-
-      const data = await response.json();
-      return data.data.imageUrl;
     } catch (error: any) {
       setMsg(`Resim yükleme hatası: ${error.message}`);
       return null;
@@ -433,8 +416,8 @@ export default function PlansAdmin() {
       }
 
       setMsg("Plan güncelleniyor…");
-      // Token gereksiz - Firestore direkt auth kullanır
-      await updateDoc(doc(db, "plans", planToEdit.id), {
+      
+      const response = await plansService.update(planToEdit.id, {
         name: editPlan.name,
         price: editPlan.price,
         currency: editPlan.currency,
@@ -444,19 +427,23 @@ export default function PlansAdmin() {
         images: editPlan.images || [],
       });
 
-      await load();
-      setMsg("Plan başarıyla güncellendi ✅");
-      setIsEditModalOpen(false);
-      setPlanToEdit(null);
-      setEditPlan({
-        name: "",
-        price: 0,
-        currency: "TRY",
-        periodMonths: 1,
-        key: "",
-        features: [],
-        images: [],
-      });
+      if (response.success) {
+        await load();
+        setMsg("Plan başarıyla güncellendi ✅");
+        setIsEditModalOpen(false);
+        setPlanToEdit(null);
+        setEditPlan({
+          name: "",
+          price: 0,
+          currency: "TRY",
+          periodMonths: 1,
+          key: "",
+          features: [],
+          images: [],
+        });
+      } else {
+        setMsg(`Hata: ${response.error || "Güncelleme başarısız"}`);
+      }
     } catch (e: any) {
       setMsg(`Hata: ${e?.message || e}`);
     }

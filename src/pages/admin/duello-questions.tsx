@@ -6,20 +6,13 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { getValidToken } from "@/utils/tokenCache";
 import { toast } from "react-toastify";
 import * as XLSX from "xlsx";
 import ExcelImportModal from "@/components/ExcelImportModal";
-
-type DuelloOption = string;
-
-interface DuelloQuestion {
-  key: string;
-  question: string;
-  options: DuelloOption[];
-  answer: string;
-  index: number;
-}
+import { 
+  duelloQuestionsService, 
+  DuelloQuestion 
+} from "@/services/admin/duelloQuestionsService";
 
 export default function DuelloQuestionsPage() {
   const router = useRouter();
@@ -33,13 +26,13 @@ export default function DuelloQuestionsPage() {
   const [showExcelModal, setShowExcelModal] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [formData, setFormData] = useState({
-    key: "",
+    id: "",
     question: "",
     answer: "",
     index: 0,
     options: ["", "", "", ""],
   });
-  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchQuestions();
@@ -49,22 +42,9 @@ export default function DuelloQuestionsPage() {
     try {
       setLoading(true);
       setError(null);
-
-      const token = await getValidToken();
-      const response = await fetch("/api/admin/duello-questions", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        const parsed = parseQuestions(data.data || {});
-        setQuestions(parsed);
-      } else {
-        setError(data.error || "Sorular yüklenemedi");
-      }
+      const rawData = await duelloQuestionsService.fetchQuestions();
+      const parsed = parseQuestions(rawData);
+      setQuestions(parsed);
     } catch (err) {
       console.error("Duello soruları yüklenirken hata:", err);
       setError(
@@ -77,30 +57,52 @@ export default function DuelloQuestionsPage() {
   };
 
   const parseQuestions = (raw: Record<string, any>): DuelloQuestion[] => {
-    return Object.entries(raw).map(([key, value]) => {
-      const firstEntry =
-        value?.[0] ?? value?.["0"] ?? Array.isArray(value) ? value[0] : value;
-      const optionsRaw = firstEntry?.options;
+    const parsedQuestions: DuelloQuestion[] = [];
+    
+    // Helper to process a single item
+    const processItem = (item: any, sourceKey: string) => {
+      if (!item || typeof item !== "object") return;
+
+      // Options parse
+      const optionsRaw = item.options;
       const parsedOptions = Array.isArray(optionsRaw)
         ? optionsRaw
         : typeof optionsRaw === "object"
         ? Object.values(optionsRaw)
         : [];
-
-      return {
-        key,
-        question: firstEntry?.question || "",
-        answer: firstEntry?.answer || "",
+        
+      parsedQuestions.push({
+        id: item.id || `q_${Math.random().toString(36).substr(2, 9)}`, // Create a temp ID if none exists
+        question: item.question || "",
+        answer: item.answer || "",
         index:
-          typeof firstEntry?.index === "number"
-            ? firstEntry.index
-            : parseInt(firstEntry?.index || "0", 10) || 0,
+          typeof item.index === "number"
+            ? item.index
+            : parseInt(item.index || "0", 10) || 0,
         options:
           parsedOptions.length > 0
-            ? parsedOptions.map((opt) => String(opt))
+            ? parsedOptions.map((opt: any) => String(opt))
             : ["", "", "", ""],
-      };
+      });
+    };
+
+    // Flatten everything
+    Object.entries(raw).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach((item) => processItem(item, key));
+      } else if (typeof value === "object" && value !== null) {
+         if (value[0] || value["0"]) {
+            Object.values(value).forEach((item) => processItem(item, key));
+         } else {
+            processItem(value, key);
+         }
+      }
     });
+
+    // Re-index to ensure consistency
+    return parsedQuestions
+      .sort((a, b) => a.index - b.index)
+      .map((q, i) => ({ ...q, index: i }));
   };
 
   const handleOpenModal = (mode: "add" | "edit", question?: DuelloQuestion) => {
@@ -108,18 +110,18 @@ export default function DuelloQuestionsPage() {
     setShowModal(true);
 
     if (mode === "edit" && question) {
-      setEditingKey(question.key);
+      setEditingId(question.id);
       setFormData({
-        key: question.key,
+        id: question.id,
         question: question.question,
         answer: question.answer,
         index: question.index,
         options: [...question.options, "", "", "", ""].slice(0, 4),
       });
     } else {
-      setEditingKey(null);
+      setEditingId(null);
       setFormData({
-        key: "",
+        id: `q_${Date.now()}`, // Auto-generate ID
         question: "",
         answer: "",
         index: questions.length,
@@ -128,21 +130,41 @@ export default function DuelloQuestionsPage() {
     }
   };
 
-  const handleDeleteQuestion = (key: string) => {
-    setQuestions((prev) => prev.filter((q) => q.key !== key));
+  const saveQuestionsToApi = async (updatedQuestions: DuelloQuestion[]) => {
+    try {
+      setSaving(true);
+      await duelloQuestionsService.saveQuestions(updatedQuestions);
+      toast.success("Değişiklikler kaydedildi");
+    } catch (err) {
+      console.error("Duello soruları kaydetme hatası:", err);
+      toast.error("Kaydedilirken bir hata oluştu");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleModalSave = () => {
-    if (!formData.key.trim() || !formData.question.trim()) {
-      toast.warn("Soru anahtarı ve metni zorunludur");
+  const handleDeleteQuestion = async (id: string) => {
+    if (!confirm("Bu soruyu silmek istediğinize emin misiniz?")) return;
+    
+    const updated = questions
+      .filter((q) => q.id !== id)
+      .map((q, i) => ({ ...q, index: i })); // Re-index after delete
+      
+    setQuestions(updated);
+    await saveQuestionsToApi(updated);
+  };
+
+  const handleModalSave = async () => {
+    if (!formData.question.trim()) {
+      toast.warn("Soru metni zorunludur");
       return;
     }
 
     const sanitized: DuelloQuestion = {
-      key: formData.key.trim(),
+      id: formData.id || `q_${Date.now()}`,
       question: formData.question.trim(),
       answer: formData.answer.trim(),
-      index: Number(formData.index) || 0,
+      index: questions.length, // Will be re-calculated on save anyway
       options: formData.options.map((opt) => opt.trim()).filter(Boolean),
     };
 
@@ -151,65 +173,61 @@ export default function DuelloQuestionsPage() {
       return;
     }
 
-    setQuestions((prev) => {
-      const others = prev.filter((q) => q.key !== sanitized.key);
-      return [...others, sanitized].sort((a, b) => a.key.localeCompare(b.key));
-    });
+    // Update state and save
+    let updated: DuelloQuestion[] = [];
+    if (modalMode === "edit") {
+        updated = questions.map(q => q.id === sanitized.id ? sanitized : q);
+    } else {
+        updated = [...questions, sanitized];
+    }
+    
+    // Normalize indices
+    updated = updated
+      .sort((a, b) => a.index - b.index) // Keep existing order mostly
+      .map((q, i) => ({ ...q, index: i }));
 
+    setQuestions(updated);
     setShowModal(false);
+    
+    await saveQuestionsToApi(updated);
   };
 
   const handleSaveAll = async () => {
-    try {
-      setSaving(true);
-      const token = await getValidToken();
-      const payload: Record<string, any> = {};
-
-      questions.forEach((q) => {
-        payload[q.key] = {
-          0: {
-            question: q.question,
-            answer: q.answer,
-            index: q.index,
-            options: q.options,
-          },
-        };
-      });
-
-      const response = await fetch("/api/admin/duello-questions", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ questions: payload }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        toast.success("Düello soruları kaydedildi");
-      } else {
-        toast.error(data.error || "Sorular kaydedilemedi");
-      }
-    } catch (err) {
-      console.error("Duello soruları kaydetme hatası:", err);
-      toast.error("Sorular kaydedilirken bir hata oluştu");
-    } finally {
-      setSaving(false);
-    }
+    await saveQuestionsToApi(questions);
   };
 
   const filteredQuestions = useMemo(() => {
     if (!search.trim()) return questions;
     return questions.filter(
       (q) =>
-        q.key.toLowerCase().includes(search.toLowerCase()) ||
         q.question.toLowerCase().includes(search.toLowerCase())
     );
   }, [questions, search]);
 
   const handleExcelButtonClick = () => {
     setShowExcelModal(true);
+  };
+
+  const handleExcelExport = () => {
+    try {
+      const exportData = questions.map((q) => ({
+        Soru: q.question,
+        "Doğru Cevap": q.answer,
+        "Seçenek 1": q.options[0] || "",
+        "Seçenek 2": q.options[1] || "",
+        "Seçenek 3": q.options[2] || "",
+        "Seçenek 4": q.options[3] || "",
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Sorular");
+      XLSX.writeFile(workbook, "duello-sorulari.xlsx");
+      toast.success("Excel dosyası indirildi");
+    } catch (error) {
+      console.error("Export hatası:", error);
+      toast.error("Dışa aktarma başarısız oldu");
+    }
   };
 
   const handleExcelImport = async (file: File) => {
@@ -243,14 +261,15 @@ export default function DuelloQuestionsPage() {
           normalized[key.trim().toLowerCase()] = row[key];
         });
 
-        const key = String(
-          normalized["key"] || normalized["id"] || normalized["soru"] || ""
-        ).trim();
         const question = String(
           normalized["question"] || normalized["soru"] || ""
         ).trim();
         const answer = String(
-          normalized["answer"] || normalized["cevap"] || ""
+          normalized["answer"] || 
+          normalized["cevap"] || 
+          normalized["doğru cevap"] || 
+          normalized["dogru cevap"] || 
+          ""
         ).trim();
 
         // Index belirtilmişse kullan, yoksa otomatik index ata
@@ -264,18 +283,27 @@ export default function DuelloQuestionsPage() {
           indexValue = autoIndexCounter++;
         }
 
-        const optionKeys = ["option1", "option2", "option3", "option4"];
-        const options = optionKeys
-          .map((optKey) => normalized[optKey])
+        const possibleOptionKeys = [
+            ["option1", "seçenek 1", "secenek 1", "seçenek1", "secenek1"],
+            ["option2", "seçenek 2", "secenek 2", "seçenek2", "secenek2"],
+            ["option3", "seçenek 3", "secenek 3", "seçenek3", "secenek3"],
+            ["option4", "seçenek 4", "secenek 4", "seçenek4", "secenek4"],
+        ];
+
+        const options = possibleOptionKeys
+          .map(keys => {
+             const foundKey = keys.find(k => normalized[k] !== undefined);
+             return foundKey ? normalized[foundKey] : undefined;
+          })
           .filter((opt) => opt !== undefined && String(opt).trim() !== "")
           .map((opt) => String(opt).trim());
 
-        if (!key || !question || options.length < 2) {
+        if (!question || options.length < 2) {
           return;
         }
 
         imported.push({
-          key,
+          id: `q_imported_${Math.random().toString(36).substr(2, 9)}`,
           question,
           answer,
           index: indexValue,
@@ -289,12 +317,9 @@ export default function DuelloQuestionsPage() {
       }
 
       // Güncellenmiş soruları hesapla
-      const map = new Map<string, DuelloQuestion>();
-      questions.forEach((q) => map.set(q.key, q));
-      imported.forEach((q) => map.set(q.key, q));
-      const finalQuestions = Array.from(map.values()).sort((a, b) =>
-        a.key.localeCompare(b.key)
-      );
+      // Append imported to existing
+      const finalQuestions = [...questions, ...imported]
+        .map((q, i) => ({ ...q, index: i }));
 
       // State'i güncelle
       setQuestions(finalQuestions);
@@ -302,35 +327,7 @@ export default function DuelloQuestionsPage() {
       toast.success(`${imported.length} soru içe aktarıldı`);
 
       // Otomatik olarak backend'e kaydet
-      const token = await getValidToken();
-      const payload: Record<string, any> = {};
-
-      finalQuestions.forEach((q) => {
-        payload[q.key] = {
-          0: {
-            question: q.question,
-            answer: q.answer,
-            index: q.index,
-            options: q.options,
-          },
-        };
-      });
-
-      const response = await fetch("/api/admin/duello-questions", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ questions: payload }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        toast.success("Sorular otomatik olarak kaydedildi");
-      } else {
-        toast.error(data.error || "Sorular kaydedilemedi");
-      }
+      await saveQuestionsToApi(finalQuestions);
     } catch (err) {
       console.error("Excel içe aktarım hatası:", err);
       toast.error("Excel dosyası okunamadı");
@@ -372,6 +369,13 @@ export default function DuelloQuestionsPage() {
               Yeni Soru
             </button>
             <button
+              className="btn btn-outline-success"
+              onClick={handleExcelExport}
+            >
+              <i className="bi bi-file-earmark-excel me-2"></i>
+              Excel Dışa Aktar
+            </button>
+            <button
               className="btn btn-outline-info"
               onClick={handleExcelButtonClick}
             >
@@ -394,8 +398,8 @@ export default function DuelloQuestionsPage() {
                 </>
               ) : (
                 <>
-                  <i className="bi bi-check-circle me-2"></i>
-                  Tümünü Kaydet
+                  <i className="bi bi-arrow-repeat me-2"></i>
+                  Zorla Kaydet
                 </>
               )}
             </button>
@@ -413,7 +417,7 @@ export default function DuelloQuestionsPage() {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="Anahtar veya soru metni ile ara..."
+                  placeholder="Soru metni ile ara..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -449,11 +453,11 @@ export default function DuelloQuestionsPage() {
         ) : (
           <div className="row g-4">
             {filteredQuestions.map((question) => (
-              <div key={question.key} className="col-12 col-lg-6">
+              <div key={question.id} className="col-12 col-lg-6">
                 <div className="card h-100 shadow-sm">
                   <div className="card-header d-flex justify-content-between align-items-center">
                     <div>
-                      <h5 className="mb-0 text-primary">{question.key}</h5>
+                      <span className="badge bg-secondary me-2">#{question.index + 1}</span>
                       <small className="text-muted">
                         Doğru Cevap: {question.answer || "-"}
                       </small>
@@ -467,7 +471,7 @@ export default function DuelloQuestionsPage() {
                       </button>
                       <button
                         className="btn btn-outline-danger"
-                        onClick={() => handleDeleteQuestion(question.key)}
+                        onClick={() => handleDeleteQuestion(question.id)}
                       >
                         <i className="bi bi-trash"></i>
                       </button>
@@ -478,7 +482,7 @@ export default function DuelloQuestionsPage() {
                     <ul className="list-group">
                       {question.options.map((option, idx) => (
                         <li
-                          key={`${question.key}-opt-${idx}`}
+                          key={`${question.id}-opt-${idx}`}
                           className={`list-group-item d-flex justify-content-between align-items-center ${
                             option === question.answer
                               ? "list-group-item-success"
@@ -522,21 +526,8 @@ export default function DuelloQuestionsPage() {
                 ></button>
               </div>
               <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label">
-                    Soru Anahtarı <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formData.key}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, key: e.target.value }))
-                    }
-                    disabled={modalMode === "edit"}
-                    placeholder="soru1"
-                  />
-                </div>
+                {/* ID (Key) is now hidden/auto-generated */}
+                <input type="hidden" value={formData.id} />
 
                 <div className="mb-3">
                   <label className="form-label">
@@ -641,9 +632,9 @@ export default function DuelloQuestionsPage() {
         description="Düello sorularını Excel dosyasından toplu olarak içe aktarabilirsiniz."
         columns={[
           {
-            name: "key",
-            required: true,
-            description: "Benzersiz soru anahtarı",
+            name: "id", // Optional, mapped for checking dupes if needed but mostly ignored
+            required: false,
+            description: "Opsiyonel ID",
           },
           { name: "question", required: true },
           { name: "answer", required: false },
@@ -655,7 +646,6 @@ export default function DuelloQuestionsPage() {
         ]}
         exampleData={[
           {
-            key: "soru1",
             question: "Türkiye'nin başkenti neresidir?",
             answer: "Ankara",
             index: 0,
@@ -665,7 +655,6 @@ export default function DuelloQuestionsPage() {
             option4: "Bursa",
           },
           {
-            key: "soru2",
             question: "Dünyanın en uzun nehri hangisidir?",
             answer: "Nil",
             index: 1,

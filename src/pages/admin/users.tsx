@@ -7,26 +7,14 @@ import PackageManager from "@/components/PackageManager";
 import ConfirmModal from "@/components/ConfirmModal";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { getValidToken } from "@/utils/tokenCache";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { usersService, UserRow } from "@/services/admin/usersService";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
 import { formatDate } from "@/utils/formatDate";
 
-type Row = {
-  id: string;
-  email: string;
-  forumNickname: string;
-  isPremium: boolean;
-  premiumExpiry: string | null;
-  isBlocked: boolean;
-  lastUpdated: any;
-  // Yeni paket sistemi bilgileri
-  ownedPackages?: Record<string, boolean>;
-  packageExpiryDates?: Record<string, any>;
-  activePackages?: string[];
-  totalActivePackages?: number;
-};
+// ... existing imports ...
+type Row = UserRow;
 
 export default function UsersAdmin() {
   // Premium işlemleri için state'ler
@@ -81,6 +69,7 @@ export default function UsersAdmin() {
     return () => clearTimeout(timer);
   }, [premium, pageSize]); // premium ve pageSize değiştiğinde otomatik çalışır
 
+
   // Kullanıcı listesi fonksiyonları - parametrelerle
   const fetchPageWithParams = async (overrideParams?: {
     q?: string;
@@ -92,32 +81,24 @@ export default function UsersAdmin() {
     setListLoading(true);
     setMsg(null);
     try {
-      const idToken = await getValidToken(); // Cache'li token
-      if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
-
-      const params = new URLSearchParams({
+      const cur = overrideParams?.toCursor ?? cursor;
+      
+      const response = await usersService.list({
         q: overrideParams?.q ?? q,
         premium: overrideParams?.premium ?? premium,
-        pageSize: String(overrideParams?.pageSize ?? pageSize),
+        pageSize: overrideParams?.pageSize ?? pageSize,
+        cursor: cur,
       });
-      const cur = overrideParams?.toCursor ?? cursor;
-      if (cur) params.append("cursor", cur);
-
-      const r = await fetch(`/api/admin/users/list?${params}`, {
-        headers: { Authorization: `Bearer ${idToken}` },
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data?.error || "İstek başarısız");
 
       // back stack yönetimi
       if (overrideParams?.forward) {
         if (cursor) backStack.current.push(cursor);
-        setCursor(data.nextCursor);
+        setCursor(response.nextCursor || null);
       } else {
-        setCursor(data.nextCursor ?? null);
+        setCursor(response.nextCursor || null);
       }
 
-      setRows(data.rows || []);
+      setRows(response.rows || []);
     } catch (e: any) {
       setMsg(`Hata: ${e?.message || e}`);
       console.error("users list error", e);
@@ -183,85 +164,9 @@ export default function UsersAdmin() {
     });
   };
 
-  const saveUserChanges = async () => {
-    if (!editingUser) return;
-
-    setEditLoading(true);
-    try {
-      const idToken = await getValidToken(); // Cache'li token
-      if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
-
-      const r = await fetch("/api/admin/users/edit", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          uid: editingUser.id,
-          ...editForm,
-        }),
-      });
-      const data = await r.json();
-
-      if (r.ok) {
-        setMsg("✅ Kullanıcı bilgileri başarıyla güncellendi!");
-        closeEditModal();
-        doSearch(); // Listeyi yenile
-      } else {
-        setMsg(`❌ Hata: ${data?.error || "Bilinmeyen hata"}`);
-      }
-    } catch (error) {
-      setMsg("❌ Bağlantı hatası oluştu.");
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
   const openBlockConfirm = (user: Row) => {
     setUserToBlock(user);
     setShowBlockConfirm(true);
-  };
-
-  const confirmBlockAction = async () => {
-    if (!userToBlock) return;
-
-    setLoading(true);
-    setShowBlockConfirm(false);
-
-    try {
-      const idToken = await getValidToken(); // Cache'li token
-      if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
-
-      const r = await fetch("/api/admin/users/block", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          uid: userToBlock.id,
-          isBlocked: !userToBlock.isBlocked,
-        }),
-      });
-      const data = await r.json();
-
-      if (r.ok) {
-        setMsg(
-          `✅ Kullanıcı ${
-            userToBlock.isBlocked ? "engeli kaldırıldı" : "engellendi"
-          }!`
-        );
-        doSearch(); // Listeyi yenile
-      } else {
-        setMsg(`❌ Hata: ${data?.error || "Bilinmeyen hata"}`);
-      }
-    } catch (error) {
-      setMsg("❌ Bağlantı hatası oluştu.");
-    } finally {
-      setLoading(false);
-      setUserToBlock(null);
-    }
   };
 
   const badge = (ok: boolean) => (
@@ -276,6 +181,51 @@ export default function UsersAdmin() {
     </span>
   );
 
+  const saveUserChanges = async () => {
+    if (!editingUser) return;
+
+    setEditLoading(true);
+    try {
+      await usersService.edit({
+          uid: editingUser.id,
+          ...editForm
+      });
+
+      setMsg("✅ Kullanıcı bilgileri başarıyla güncellendi!");
+      closeEditModal();
+      doSearch(); // Listeyi yenile
+    } catch (error: any) {
+      setMsg(`❌ Hata: ${error?.message || "Bir hata oluştu"}`);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const confirmBlockAction = async () => {
+    if (!userToBlock) return;
+
+    setLoading(true);
+    setShowBlockConfirm(false);
+
+    try {
+      await usersService.toggleBlock(userToBlock.id, !userToBlock.isBlocked);
+
+      setMsg(
+        `✅ Kullanıcı ${
+          userToBlock.isBlocked ? "engeli kaldırıldı" : "engellendi"
+        }!`
+      );
+      doSearch(); // Listeyi yenile
+    } catch (error: any) {
+       setMsg(`❌ Hata: ${error?.message || "İşlem başarısız"}`);
+    } finally {
+      setLoading(false);
+      setUserToBlock(null);
+    }
+  };
+ 
+  // ... badges ...
+
   // Premium işlemleri fonksiyonu
   const call = async (action: "grant" | "revoke") => {
     if (!email.trim()) {
@@ -287,36 +237,25 @@ export default function UsersAdmin() {
     setMsg("İşlem gerçekleştiriliyor...");
 
     try {
-      const idToken = await getValidToken(); // Cache'li token
-      if (!idToken) throw new Error("Kullanıcı oturumu bulunamadı");
-
-      const r = await fetch("/api/admin/users/premium", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ email, months, action }),
+      await usersService.managePremium({
+          email,
+          months,
+          action
       });
-      const data = await r.json();
 
-      if (r.ok) {
-        setMsg(
-          `✅ ${
-            action === "grant"
-              ? "Premium başarıyla verildi/uzatıldı!"
-              : "Premium başarıyla kaldırıldı!"
-          }`
-        );
-        setEmail(""); // Formu temizle
-        setMonths(1);
-        // Liste yenile
-        doSearch();
-      } else {
-        setMsg(`❌ Hata: ${data?.error || "Bilinmeyen hata"}`);
-      }
-    } catch (error) {
-      setMsg("❌ Bağlantı hatası oluştu.");
+      setMsg(
+        `✅ ${
+          action === "grant"
+            ? "Premium başarıyla verildi/uzatıldı!"
+            : "Premium başarıyla kaldırıldı!"
+        }`
+      );
+      setEmail(""); // Formu temizle
+      setMonths(1);
+      // Liste yenile
+      doSearch();
+    } catch (error: any) {
+      setMsg(`❌ Hata: ${error?.message || "İşlem başarısız"}`);
     } finally {
       setLoading(false);
     }

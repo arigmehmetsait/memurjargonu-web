@@ -64,8 +64,15 @@ export default async function handler(
         {
           days,
           updatedAt: new Date(),
-        },
-        { merge: true }
+        }
+        // Removed { merge: true } to allow overwriting the days object. 
+        // We want to replace the 'days' map entirely with the new state.
+        // However, we should be careful not to delete other top-level fields if there are any.
+        // But since 'days' is the main content and we want to sync it, overwrite is likely correct for this nested structure.
+        // Actually, let's use merge: true but ONLY for top level fields? No, days is a nested map.
+        // If we use merge: true, nested fields are merged.
+        // To delete keys in a map with merge:true, we'd need to send them as FieldValue.delete().
+        // Easier: use set without merge to replace, OR use update() which replaces the entire field value.
       );
 
       return res.status(200).json({

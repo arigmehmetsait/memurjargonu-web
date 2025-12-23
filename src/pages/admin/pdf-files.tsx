@@ -6,19 +6,9 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { getValidToken } from "@/utils/tokenCache";
+import { pdfFilesService, PDFFile } from "@/services/admin/pdfFilesService";
 import { toast } from "react-toastify";
 import ConfirmModal from "@/components/ConfirmModal";
-
-interface PDFFile {
-  id: string;
-  title: string;
-  pdfUrl: string;
-  video?: string;
-  questions?: Record<string, any>;
-  createdAt?: any;
-  updatedAt?: any;
-}
 
 export default function PDFFilesPage() {
   const router = useRouter();
@@ -41,19 +31,12 @@ export default function PDFFilesPage() {
       setLoading(true);
       setError(null);
 
-      const token = await getValidToken();
-      const response = await fetch("/api/admin/pdf-files/list", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await pdfFilesService.list();
 
-      const data = await response.json();
-
-      if (data.success) {
-        setPdfFiles(data.data || []);
+      if (response.success) {
+        setPdfFiles(response.data || []);
       } else {
-        setError(data.error || "PDF dosyaları yüklenemedi");
+        setError(response.error || "PDF dosyaları yüklenemedi");
       }
     } catch (err) {
       console.error("PDF dosyaları yüklenirken hata:", err);
@@ -75,21 +58,13 @@ export default function PDFFilesPage() {
     if (!pdfToDelete) return;
 
     try {
-      const token = await getValidToken();
-      const response = await fetch(`/api/admin/pdf-files/${pdfToDelete.id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await pdfFilesService.delete(pdfToDelete.id);
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         toast.success("PDF dosyası silindi");
         fetchPDFFiles();
       } else {
-        toast.error(data.error || "PDF dosyası silinemedi");
+        toast.error(response.error || "PDF dosyası silinemedi");
       }
     } catch (err) {
       console.error("PDF dosyası silme hatası:", err);
