@@ -6,7 +6,7 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { getValidToken } from "@/utils/tokenCache";
+import { pdfFilesService } from "@/services/admin/pdfFilesService";
 import { toast } from "react-toastify";
 
 export default function PDFFileDetailPage() {
@@ -32,23 +32,16 @@ export default function PDFFileDetailPage() {
       setLoading(true);
       setError(null);
 
-      const token = await getValidToken();
-      const response = await fetch(`/api/admin/pdf-files/${docId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await pdfFilesService.get(docId as string);
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success && response.data) {
         setFormData({
-          title: data.data.title || "",
-          pdfUrl: data.data.pdfUrl || "",
-          video: data.data.video || "",
+          title: response.data.title || "",
+          pdfUrl: response.data.pdfUrl || "",
+          video: response.data.video || "",
         });
       } else {
-        setError(data.error || "PDF dosyası yüklenemedi");
+        setError(response.error || "PDF dosyası yüklenemedi");
       }
     } catch (err) {
       console.error("PDF dosyası yüklenirken hata:", err);
@@ -71,27 +64,17 @@ export default function PDFFileDetailPage() {
 
     try {
       setSaving(true);
-      const token = await getValidToken();
 
-      const response = await fetch(`/api/admin/pdf-files/${docId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: formData.title.trim(),
-          pdfUrl: formData.pdfUrl.trim(),
-          video: formData.video.trim() || "",
-        }),
+      const response = await pdfFilesService.update(docId as string, {
+        title: formData.title.trim(),
+        pdfUrl: formData.pdfUrl.trim(),
+        video: formData.video.trim() || undefined,
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         toast.success("PDF dosyası güncellendi");
       } else {
-        toast.error(data.error || "PDF dosyası güncellenemedi");
+        toast.error(response.error || "PDF dosyası güncellenemedi");
       }
     } catch (err) {
       console.error("PDF dosyası güncelleme hatası:", err);

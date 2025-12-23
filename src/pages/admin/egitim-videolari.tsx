@@ -4,16 +4,8 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { getValidToken } from "@/utils/tokenCache";
+import { egitimVideolariService, EgitimVideoDocument } from "@/services/admin/egitimVideolariService";
 import { toast } from "react-toastify";
-
-interface EgitimVideoDocument {
-  id: string;
-  name: string;
-  videoCount: number;
-  videos: string[];
-  [key: string]: any;
-}
 
 export default function AdminEgitimVideolariPage() {
   const router = useRouter();
@@ -38,20 +30,12 @@ export default function AdminEgitimVideolariPage() {
       setLoading(true);
       setError(null);
 
-      const idToken = await getValidToken();
+      const response = await egitimVideolariService.list();
 
-      const response = await fetch("/api/admin/egitim-videolari/list", {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setDocuments(data.data);
+      if (response.success) {
+        setDocuments(response.data);
       } else {
-        const errorMsg = data.error || "Eğitim videoları yüklenemedi";
+        const errorMsg = response.error || "Eğitim videoları yüklenemedi";
         setError(errorMsg);
       }
     } catch (err) {
@@ -74,28 +58,15 @@ export default function AdminEgitimVideolariPage() {
     try {
       setCreating(true);
 
-      const idToken = await getValidToken();
+      const response = await egitimVideolariService.create(newDocId.trim());
 
-      const response = await fetch("/api/admin/egitim-videolari/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          docId: newDocId.trim(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         setShowCreateModal(false);
         setNewDocId("");
         await fetchDocuments();
         toast.success("Eğitim videosu dokümanı başarıyla oluşturuldu!");
       } else {
-        toast.error(data.error || "Doküman oluşturulamadı");
+        toast.error(response.error || "Doküman oluşturulamadı");
       }
     } catch (err) {
       console.error("Eğitim videosu dokümanı oluşturma hatası:", err);
@@ -115,27 +86,15 @@ export default function AdminEgitimVideolariPage() {
 
     try {
       setDeleting(true);
-      const idToken = await getValidToken();
+      const response = await egitimVideolariService.delete(docToDelete.id);
 
-      const response = await fetch(
-        `/api/admin/egitim-videolari/${encodeURIComponent(docToDelete.id)}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         setShowDeleteModal(false);
         setDocToDelete(null);
         fetchDocuments();
         toast.success(`"${docToDelete.id}" dokümanı başarıyla silindi.`);
       } else {
-        toast.error(data.error || "Doküman silinemedi");
+        toast.error(response.error || "Doküman silinemedi");
       }
     } catch (err) {
       console.error("Eğitim videosu dokümanı silme hatası:", err);

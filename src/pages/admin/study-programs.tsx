@@ -4,8 +4,8 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { getValidToken } from "@/utils/tokenCache";
 import { toast } from "react-toastify";
+import { studyProgramsService } from "@/services/admin/studyProgramsService";
 
 interface StudyProgramSummary {
   id: string;
@@ -37,21 +37,8 @@ export default function AdminStudyProgramsPage() {
       setLoading(true);
       setError(null);
 
-      const idToken = await getValidToken();
-
-      const response = await fetch("/api/admin/study-programs/list", {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setPrograms(data.data);
-      } else {
-        setError(data.error || "Programlar yüklenemedi");
-      }
+      const response = await studyProgramsService.getAll();
+      setPrograms(response.data as any); // Type assertion might be needed if service returns specific type
     } catch (err) {
       console.error("Programlar yüklenirken hata:", err);
       setError(
@@ -71,31 +58,24 @@ export default function AdminStudyProgramsPage() {
 
     try {
       setCreating(true);
-      const idToken = await getValidToken();
-      const response = await fetch("/api/admin/study-programs/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
+      
+      const response = await studyProgramsService.create({
           programId: newProgramId.trim(),
-        }),
       });
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         toast.success("Program başarıyla oluşturuldu");
         setShowCreateModal(false);
         setNewProgramId("");
         await fetchPrograms();
       } else {
-        toast.error(data.error || "Program oluşturulamadı");
+        toast.error(response.message || "Program oluşturulamadı");
       }
     } catch (err) {
       console.error("Program oluşturma hatası:", err);
-      toast.error("Program oluşturulurken bir hata oluştu");
+      toast.error(
+        err instanceof Error ? err.message : "Program oluşturulurken bir hata oluştu"
+      );
     } finally {
       setCreating(false);
     }
@@ -111,26 +91,16 @@ export default function AdminStudyProgramsPage() {
 
     try {
       setDeleting(true);
-      const idToken = await getValidToken();
-      const response = await fetch(
-        `/api/admin/study-programs/${encodeURIComponent(programToDelete.id)}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }
-      );
+      
+      const response = await studyProgramsService.delete(programToDelete.id);
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         toast.success("Program başarıyla silindi");
         setShowDeleteModal(false);
         setProgramToDelete(null);
         await fetchPrograms();
       } else {
-        toast.error(data.error || "Program silinemedi");
+        toast.error(response.message || "Program silinemedi");
       }
     } catch (err) {
       console.error("Program silme hatası:", err);
@@ -430,4 +400,3 @@ export default function AdminStudyProgramsPage() {
     </AdminGuard>
   );
 }
-

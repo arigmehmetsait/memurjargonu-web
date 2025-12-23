@@ -4,17 +4,10 @@ import Head from "next/head";
 import Header from "@/components/Header";
 import AdminGuard from "@/components/AdminGuard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { auth } from "@/lib/firebase";
-import { getValidToken } from "@/utils/tokenCache";
+import { eslestirmelerService, EslestirmeDocument } from "@/services/admin/eslestirmelerService";
 import { toast } from "react-toastify";
 
-interface EslestirmeDocument {
-  id: string;
-  name: string;
-  levelCount: number;
-  levels: string[];
-  [key: string]: any;
-}
+
 
 export default function AdminEslestirmelerPage() {
   const router = useRouter();
@@ -39,20 +32,12 @@ export default function AdminEslestirmelerPage() {
       setLoading(true);
       setError(null);
 
-      const idToken = await getValidToken();
+      const response = await eslestirmelerService.list();
 
-      const response = await fetch("/api/admin/eslestirmeler/list", {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setDocuments(data.data);
+      if (response.success) {
+        setDocuments(response.data);
       } else {
-        const errorMsg = data.error || "Eşleştirmeler yüklenemedi";
+        const errorMsg = response.error || "Eşleştirmeler yüklenemedi";
         setError(errorMsg);
       }
     } catch (err) {
@@ -75,28 +60,15 @@ export default function AdminEslestirmelerPage() {
     try {
       setCreating(true);
 
-      const idToken = await getValidToken();
+      const response = await eslestirmelerService.create(newDocId.trim());
 
-      const response = await fetch("/api/admin/eslestirmeler/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          docId: newDocId.trim(),
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         setShowCreateModal(false);
         setNewDocId("");
         await fetchDocuments();
         toast.success("Eşleştirme dokümanı başarıyla oluşturuldu!");
       } else {
-        toast.error(data.error || "Doküman oluşturulamadı");
+        toast.error(response.error || "Doküman oluşturulamadı");
       }
     } catch (err) {
       console.error("Eşleştirme dokümanı oluşturma hatası:", err);
@@ -116,29 +88,17 @@ export default function AdminEslestirmelerPage() {
 
     try {
       setDeleting(true);
-      const idToken = await getValidToken();
+      const response = await eslestirmelerService.delete(docToDelete.id);
 
-      const response = await fetch(
-        `/api/admin/eslestirmeler/${encodeURIComponent(docToDelete.id)}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
+      if (response.success) {
         setShowDeleteModal(false);
         setDocToDelete(null);
         fetchDocuments();
         toast.success(
-          `"${data.data?.name || docToDelete.id}" dokümanı başarıyla silindi.`
+          `"${response.data?.name || docToDelete.id}" dokümanı başarıyla silindi.`
         );
       } else {
-        toast.error(data.error || "Doküman silinemedi");
+        toast.error(response.error || "Doküman silinemedi");
       }
     } catch (err) {
       console.error("Eşleştirme dokümanı silme hatası:", err);

@@ -4,21 +4,9 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Alert from "@/components/Alert";
 import Breadcrumb, { BreadcrumbItem } from "@/components/Breadcrumb";
-import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { getValidToken } from "@/utils/tokenCache";
+import { problemReportsService, ProblemReport } from "@/services/admin/problemReportsService";
 import { formatDate } from "@/utils/formatDate";
 import { useEffect, useState } from "react";
-
-type ProblemReport = {
-  id: string;
-  description: string;
-  problemType: string;
-  status: "new" | "in_review" | "resolved";
-  timestamp: any;
-  userEmail: string;
-  userId: string;
-};
 
 export default function ProblemReportsAdmin() {
   const [reports, setReports] = useState<ProblemReport[]>([]);
@@ -31,23 +19,12 @@ export default function ProblemReportsAdmin() {
     setMessage(null);
 
     try {
-      const idToken = await getValidToken(); // Cache'li token
+      const response = await problemReportsService.list();
 
-      const response = await fetch("/api/admin/problem-reports", {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setReports(data.data);
-        } else {
-          setMessage(`❌ ${data.error || "Problem reports yüklenemedi"}`);
-        }
+      if (response.success) {
+        setReports(response.data);
       } else {
-        setMessage("❌ Problem reports yüklenirken hata oluştu");
+        setMessage(`❌ ${response.error || "Problem reports yüklenemedi"}`);
       }
     } catch (error) {
       console.error("Problem reports load error:", error);
@@ -63,30 +40,13 @@ export default function ProblemReportsAdmin() {
     newStatus: "new" | "in_review" | "resolved"
   ) => {
     try {
-      const idToken = await getValidToken(); // Cache'li token
+      const response = await problemReportsService.updateStatus(reportId, newStatus);
 
-      const response = await fetch("/api/admin/problem-reports/status", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          reportId,
-          status: newStatus,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setMessage(`✅ Status başarıyla güncellendi`);
-          loadReports(); // Listeyi yenile
-        } else {
-          setMessage(`❌ ${data.error || "Status güncellenemedi"}`);
-        }
+      if (response.success) {
+        setMessage(`✅ Status başarıyla güncellendi`);
+        loadReports(); // Listeyi yenile
       } else {
-        setMessage("❌ Status güncellenirken hata oluştu");
+        setMessage(`❌ ${response.error || "Status güncellenemedi"}`);
       }
     } catch (error) {
       console.error("Status update error:", error);
