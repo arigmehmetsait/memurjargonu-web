@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import AdminGuard from "@/components/AdminGuard";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -32,33 +32,6 @@ export default function NotificationsAdmin() {
     targetType: "all" as "all" | "specific",
     targetUserIds: [] as string[],
   });
-// ... (rest of the component logic remains the same until the form part)
-
-                        <div className="mb-3">
-                          <label htmlFor="redirectUrl" className="form-label">
-                            Yönlendirme Sayfası
-                          </label>
-                          <select
-                            className="form-select"
-                            id="redirectUrl"
-                            value={formData.redirectUrl}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                redirectUrl: e.target.value,
-                              })
-                            }
-                          >
-                            {Object.entries(RedirectRoutes).map(([url, label]) => (
-                              <option key={url} value={url}>
-                                {label} ({url})
-                              </option>
-                            ))}
-                          </select>
-                          <small className="form-text text-muted">
-                            Bildirime tıklandığında kullanıcı bu sayfaya yönlendirilecek
-                          </small>
-                        </div>
 
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -88,16 +61,15 @@ export default function NotificationsAdmin() {
     setLoadingUsers(true);
     try {
       const response = await usersService.list({ q: query, pageSize: 10 });
-      if (response.success) {
-        setAvailableUsers(
-          response.rows?.map((row: any) => ({
-            id: row.id,
-            email: row.email,
-          })) || []
-        );
-      }
+      setAvailableUsers(
+        response.rows?.map((row: any) => ({
+          id: row.id,
+          email: row.email,
+        })) || []
+      );
     } catch (error) {
       console.error("Error searching users:", error);
+      setAvailableUsers([]);
     } finally {
       setLoadingUsers(false);
     }
@@ -177,13 +149,21 @@ export default function NotificationsAdmin() {
       const cursor = reset ? undefined : (historyCursor || undefined);
       const data = await notificationsService.getHistory(20, cursor);
       
+      if (!data.success && data.error) {
+        throw new Error(data.error);
+      }
+      
       setHistory((prev) =>
         reset ? data.notifications : [...prev, ...data.notifications]
       );
       setHistoryCursor(data.nextCursor);
       setHasMoreHistory(data.hasMore);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching history:", error);
+      setMsg({
+        type: "error",
+        text: error.message || "Bildirim geçmişi yüklenirken hata oluştu",
+      });
     } finally {
       setHistoryLoading(false);
     }

@@ -22,9 +22,11 @@ export interface ListUsersParams {
 }
 
 export interface ListUsersResponse {
-    success: boolean;
     rows: UserRow[];
-    nextCursor?: string;
+    nextCursor?: string | null;
+    count?: number;
+    hasMore?: boolean;
+    searchTotal?: number; // Arama modunda toplam sonuç sayısı
 }
 
 export interface EditUserParams {
