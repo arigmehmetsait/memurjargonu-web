@@ -34,7 +34,7 @@ export const notificationsService = {
         usersWithoutTokens?: string[];
         error?: string;
     }> {
-        return apiClient.post("/admin/notifications/send", params);
+        return apiClient.post("/notifications/send", params);
     },
 
     // Get notification history
@@ -42,6 +42,6 @@ export const notificationsService = {
         const params = new URLSearchParams({ pageSize: String(pageSize) });
         if (cursor) params.append("cursor", cursor);
 
-        return apiClient.get(`/admin/notifications/history?${params.toString()}`);
+        return apiClient.get(`/notifications/history?${params.toString()}`);
     },
 };
