@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/apiClient";
-import { PDFDocument, PDFListResponse, PDFDocumentRequest, PDFStatus, PDFSubcategory } from "@/types/pdf";
+import { PDFListResponse, PDFDocumentRequest, PDFStatus, PDFSubcategory } from "@/types/pdf";
 
 export interface ContentListParams {
     query?: string;
