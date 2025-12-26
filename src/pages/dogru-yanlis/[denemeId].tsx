@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Header from "@/components/Header";
@@ -40,16 +40,9 @@ export default function DogruYanlisDenemePage() {
   const [error, setError] = useState<string | null>(null);
   const [currentSoruIndex, setCurrentSoruIndex] = useState(0);
   const [cevaplar, setCevaplar] = useState<Cevap[]>([]);
-  const [denemeTamamlandi, setDenemeTamamlandi] = useState(false);
   const [sonucGoster, setSonucGoster] = useState(false);
 
-  useEffect(() => {
-    if (denemeId && typeof denemeId === "string") {
-      fetchSorular();
-    }
-  }, [denemeId]);
-
-  const fetchSorular = async () => {
+  const fetchSorular = useCallback(async () => {
     if (!denemeId || typeof denemeId !== "string") return;
 
     try {
@@ -79,7 +72,13 @@ export default function DogruYanlisDenemePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [denemeId]);
+
+  useEffect(() => {
+    if (denemeId && typeof denemeId === "string") {
+      fetchSorular();
+    }
+  }, [denemeId, fetchSorular]);
 
   const handleCevapSec = (cevap: number) => {
     if (!denemeData) return;
@@ -96,7 +95,6 @@ export default function DogruYanlisDenemePage() {
       setCurrentSoruIndex(currentSoruIndex + 1);
     } else {
       // Son soruya ulaşıldı
-      setDenemeTamamlandi(true);
       setSonucGoster(true);
     }
   };
@@ -110,7 +108,6 @@ export default function DogruYanlisDenemePage() {
   const handleDenemeBasla = () => {
     setSonucGoster(false);
     setCurrentSoruIndex(0);
-    setDenemeTamamlandi(false);
     setCevaplar(
       denemeData?.sorular.map((soru) => ({
         soruId: soru.id,

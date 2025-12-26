@@ -11,7 +11,6 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import type { Plan } from "@/types/plan";
-import Link from "next/link";
 import Header from "@/components/Header";
 import { useCart } from "@/context/CartContext";
 import { onAuthStateChanged } from "firebase/auth";
@@ -326,6 +325,7 @@ export default function PlansPage() {
                                   imgIndex === 0 ? "active" : ""
                                 }`}
                               >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={imageUrl}
                                   alt={`${plan.name} - Resim ${imgIndex + 1}`}

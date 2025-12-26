@@ -1490,7 +1490,8 @@ export default function AdminEslestirmeEditPage() {
                         className="btn btn-outline-primary"
                         onClick={() => {
                           const input = newObjectKeyInputRef.current;
-                          const newKey = input?.value.trim();
+                          if (!input) return;
+                          const newKey = input.value.trim();
                           if (newKey && !objectFormData[newKey]) {
                             setObjectFormData({ ...objectFormData, [newKey]: "" });
                             input.value = "";

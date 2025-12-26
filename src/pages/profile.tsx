@@ -97,17 +97,6 @@ export default function Profile() {
     }
   };
 
-  const getCategoryColor = (category: PackageCategory) => {
-    switch (category) {
-      case PackageCategory.KPSS:
-        return "primary";
-      case PackageCategory.AGS:
-        return "info";
-      default:
-        return "secondary";
-    }
-  };
-
   if (loading) {
     return (
       <div>
