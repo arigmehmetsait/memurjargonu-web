@@ -52,24 +52,53 @@ export default async function handler(
 
     // Arama varsa: daha geniş strategi kullan
     if (qnorm) {
-      // Arama yaparken tüm veriyi çekmek için büyük limit kullan
-      const searchFetchSize = 1000; // Arama için daha yüksek limit
+      // Arama modunda tüm kullanıcıları çekmek için batch'ler halinde çek
+      const batchSize = 1000; // Firestore'un tek seferde çekebileceği maksimum
+      let allDocs: any[] = [];
+      let lastDoc: any = null;
+      let hasMore = true;
 
-      let qref = adminDb.collection("users") as any;
+      while (hasMore) {
+        let qref = adminDb.collection("users") as any;
 
-      // Premium filtresi ÖNCE uygulanır
-      if (premium === "true") {
-        qref = qref.where("isPremium", "==", true);
-      } else if (premium === "false") {
-        qref = qref.where("isPremium", "==", false);
+        // Premium filtresi ÖNCE uygulanır
+        if (premium === "true") {
+          qref = qref.where("isPremium", "==", true);
+        } else if (premium === "false") {
+          qref = qref.where("isPremium", "==", false);
+        }
+
+        // Arama modunda document ID'ye göre sıralama yap (tüm kayıtları görmek için)
+        // Bu şekilde tüm kayıtları batch'ler halinde çekebiliriz
+        qref = qref.orderBy(FieldPath.documentId(), "asc");
+        
+        // lastDoc varsa pagination için kullan
+        if (lastDoc) {
+          qref = qref.startAfter(lastDoc);
+        }
+
+        const snap = await qref.limit(batchSize).get();
+        
+        if (snap.empty || snap.docs.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        allDocs = allDocs.concat(snap.docs);
+        lastDoc = snap.docs[snap.docs.length - 1];
+        
+        // Eğer çekilen kayıt sayısı batchSize'den azsa, daha fazla kayıt yok demektir
+        if (snap.docs.length < batchSize) {
+          hasMore = false;
+        }
+
+        // Güvenlik için maksimum 10000 kayıt çek (çok büyük veritabanları için)
+        if (allDocs.length >= 10000) {
+          hasMore = false;
+        }
       }
 
-      // Arama için ordering
-      qref = qref
-        .orderBy("lastUpdated", "desc")
-        .orderBy(FieldPath.documentId(), "desc");
-
-      const snap = await qref.limit(searchFetchSize).get();
+      const snap = { docs: allDocs };
 
       // Kayıtları toparla ve geliştirilmiş email çekme
       const allItems = snap.docs.map((d: any) => {
@@ -139,8 +168,15 @@ export default async function handler(
         if (!aExact && bExact) return 1;
 
         // İkisi de exact ya da ikisi de partial ise lastUpdated'e göre sırala
-        const aTime = a.lastUpdated?.toMillis?.() || 0;
-        const bTime = b.lastUpdated?.toMillis?.() || 0;
+        // lastUpdated null ise en sona koy
+        const aTime = a.lastUpdated?.toMillis?.() || a.lastUpdated?.getTime?.() || 0;
+        const bTime = b.lastUpdated?.toMillis?.() || b.lastUpdated?.getTime?.() || 0;
+        
+        // Eğer ikisi de 0 ise (null), id'ye göre sırala
+        if (aTime === 0 && bTime === 0) {
+          return a.id.localeCompare(b.id);
+        }
+        
         return bTime - aTime;
       });
 

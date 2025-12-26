@@ -73,49 +73,95 @@ export default async function handler(
         });
       }
 
-      // Eğer level oluşturuluyor veya güncelleniyorsa, otomatik order ekle
-      let finalValue = value;
-      if (fieldPath.startsWith("level") && typeof value === "object" && value !== null) {
-        // Eğer gelen veride order varsa, onu kullan (sıralama güncellemesi için)
-        if (typeof value.order === "number") {
-          finalValue = value;
-        } else {
-          // Order yoksa, mevcut order'ı koru veya yeni order ata
-          const doc = await docRef.get();
-          const docData = (doc.exists ? doc.data() : {}) as Record<string, any>;
-          
-          const existingLevel = docData[fieldPath];
+      // Nested path kontrolü (örn: "level7.Gider üzerinden alınan vergiler")
+      const isNestedPath = fieldPath.includes(".");
+      const topLevelPath = isNestedPath ? fieldPath.split(".")[0] : fieldPath;
+      const nestedPath = isNestedPath ? fieldPath.split(".").slice(1).join(".") : null;
+
+      const doc = await docRef.get();
+      const docData = (doc.exists ? doc.data() : {}) as Record<string, any>;
+
+      let finalValue: any;
+
+      // Nested path için mevcut parent object'i al ve merge et
+      if (isNestedPath && nestedPath) {
+        const existingParent = docData[topLevelPath] || {};
+        
+        // Deep clone yaparak mevcut parent object'i koru
+        const updatedParent = JSON.parse(JSON.stringify(existingParent));
+        
+        // Nested path'i parçalara ayır (örn: "Gider üzerinden alınan vergiler" veya "level8.soru1")
+        const pathParts = nestedPath.split(".");
+        
+        // Nested path'e göre değeri yerleştir
+        let current: any = updatedParent;
+        for (let i = 0; i < pathParts.length - 1; i++) {
+          const key = pathParts[i];
+          if (!current[key] || typeof current[key] !== "object") {
+            current[key] = {};
+          }
+          current = current[key];
+        }
+        
+        // Son key'e değeri ata
+        const lastKey = pathParts[pathParts.length - 1];
+        current[lastKey] = value;
+        
+        finalValue = updatedParent;
+      } else {
+        // Top-level path için
+        finalValue = value;
+      }
+
+      // Eğer top-level level oluşturuluyor veya güncelleniyorsa, otomatik order ekle
+      // Nested path'ler için order ekleme YAPMA - sadece mevcut order'ı koru
+      if (topLevelPath.startsWith("level") && typeof finalValue === "object" && finalValue !== null) {
+        if (isNestedPath) {
+          // Nested path için: Mevcut order'ı koru (eğer varsa)
+          const existingLevel = docData[topLevelPath];
           if (existingLevel && typeof existingLevel === "object" && typeof existingLevel.order === "number") {
-            // Mevcut order'ı koru
-            finalValue = {
-              ...value,
-              order: existingLevel.order,
-            };
+            finalValue.order = existingLevel.order;
+          }
+        } else {
+          // Top-level path için: Order mantığını uygula
+          // Eğer gelen veride order varsa, onu kullan (sıralama güncellemesi için)
+          if (typeof finalValue.order === "number") {
+            // Order zaten var, değiştirme
           } else {
-            // Yeni level için order = maxOrder + 1
-            let maxOrder = 0;
-            Object.keys(docData).forEach((key) => {
-              if (key.startsWith("level") && docData[key] && typeof docData[key] === "object") {
-                const levelOrder = docData[key].order;
-                if (typeof levelOrder === "number" && levelOrder > maxOrder) {
-                  maxOrder = levelOrder;
+            // Order yoksa, mevcut order'ı koru veya yeni order ata
+            const existingLevel = docData[topLevelPath];
+            if (existingLevel && typeof existingLevel === "object" && typeof existingLevel.order === "number") {
+              // Mevcut order'ı koru
+              finalValue = {
+                ...finalValue,
+                order: existingLevel.order,
+              };
+            } else {
+              // Yeni level için order = maxOrder + 1
+              let maxOrder = 0;
+              Object.keys(docData).forEach((key) => {
+                if (key.startsWith("level") && docData[key] && typeof docData[key] === "object") {
+                  const levelOrder = docData[key].order;
+                  if (typeof levelOrder === "number" && levelOrder > maxOrder) {
+                    maxOrder = levelOrder;
+                  }
                 }
-              }
-            });
-            
-            finalValue = {
-              ...value,
-              order: maxOrder + 1,
-            };
+              });
+              
+              finalValue = {
+                ...finalValue,
+                order: maxOrder + 1,
+              };
+            }
           }
         }
       }
 
+      // Güncelleme yap
       const updateData: Record<string, unknown> = {
-        [fieldPath]: finalValue,
+        [topLevelPath]: finalValue,
         updatedAt: new Date(),
       };
-
       await docRef.update(updateData);
 
       console.log(`Eşleştirme dokümanı güncellendi: ${docId}`);

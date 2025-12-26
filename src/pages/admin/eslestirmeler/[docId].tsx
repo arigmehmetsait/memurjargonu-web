@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { JSX } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
@@ -141,8 +141,12 @@ export default function AdminEslestirmeEditPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [fieldValue, setFieldValue] = useState<string>("");
+  const [editingValue, setEditingValue] = useState<any>(null);
+  const [editingValueType, setEditingValueType] = useState<"string" | "number" | "boolean" | "object" | "array" | null>(null);
+  const [objectFormData, setObjectFormData] = useState<Record<string, any>>({});
+  const [arrayFormData, setArrayFormData] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const newObjectKeyInputRef = useRef<HTMLInputElement>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showLevelModal, setShowLevelModal] = useState(false);
@@ -216,7 +220,8 @@ export default function AdminEslestirmeEditPage() {
     if (
       fieldPath.includes("level") &&
       currentValue &&
-      typeof currentValue === "object"
+      typeof currentValue === "object" &&
+      !Array.isArray(currentValue)
     ) {
       const qType = currentValue.questionType;
       if (qType && [1, 2, 3].includes(qType)) {
@@ -225,9 +230,31 @@ export default function AdminEslestirmeEditPage() {
       }
     }
 
-    // Normal JSON düzenleme
+    // Veri tipine göre form aç
     setEditingField(fieldPath);
-    setFieldValue(JSON.stringify(currentValue, null, 2));
+    setEditingValue(currentValue);
+    
+    if (currentValue === null || currentValue === undefined) {
+      setEditingValueType("string");
+      setEditingValue("");
+    } else if (typeof currentValue === "string") {
+      setEditingValueType("string");
+    } else if (typeof currentValue === "number") {
+      setEditingValueType("number");
+    } else if (typeof currentValue === "boolean") {
+      setEditingValueType("boolean");
+    } else if (Array.isArray(currentValue)) {
+      setEditingValueType("array");
+      setArrayFormData([...currentValue]);
+    } else if (typeof currentValue === "object") {
+      setEditingValueType("object");
+      setObjectFormData({ ...currentValue });
+    } else {
+      // Fallback: JSON editor
+      setEditingValueType("string");
+      setEditingValue(JSON.stringify(currentValue, null, 2));
+    }
+    
     setShowEditModal(true);
   };
 
@@ -272,7 +299,10 @@ export default function AdminEslestirmeEditPage() {
 
   const cancelEditing = () => {
     setEditingField(null);
-    setFieldValue("");
+    setEditingValue(null);
+    setEditingValueType(null);
+    setObjectFormData({});
+    setArrayFormData([]);
     setShowEditModal(false);
   };
 
@@ -319,22 +349,44 @@ export default function AdminEslestirmeEditPage() {
 
   const saveField = async (fieldPath: string) => {
     try {
-      let parsedValue: any;
-      try {
-        parsedValue = JSON.parse(fieldValue);
-      } catch (e) {
-        toast.warn("Geçersiz JSON formatı. Lütfen düzeltin.");
+      let valueToSave: any;
+
+      // Veri tipine göre değeri hazırla
+      if (editingValueType === "string") {
+        // Eğer JSON string gibi görünüyorsa parse et, değilse direkt kullan
+        const trimmed = String(editingValue).trim();
+        if ((trimmed.startsWith("{") || trimmed.startsWith("[")) && trimmed.endsWith("}") || trimmed.endsWith("]")) {
+          try {
+            valueToSave = JSON.parse(trimmed);
+          } catch {
+            valueToSave = editingValue;
+          }
+        } else {
+          valueToSave = editingValue;
+        }
+      } else if (editingValueType === "number") {
+        valueToSave = Number(editingValue);
+        if (isNaN(valueToSave)) {
+          toast.warn("Geçerli bir sayı giriniz.");
+          return;
+        }
+      } else if (editingValueType === "boolean") {
+        valueToSave = Boolean(editingValue);
+      } else if (editingValueType === "array") {
+        valueToSave = arrayFormData;
+      } else if (editingValueType === "object") {
+        valueToSave = objectFormData;
+      } else {
+        toast.warn("Geçersiz veri tipi.");
         return;
       }
 
       setSaving(true);
 
-      const response = await eslestirmelerService.updateField(docId as string, fieldPath, parsedValue);
+      const response = await eslestirmelerService.updateField(docId as string, fieldPath, valueToSave);
 
       if (response.success) {
-        setEditingField(null);
-        setFieldValue("");
-        setShowEditModal(false);
+        cancelEditing();
         await fetchDocument();
         toast.success("Alan başarıyla güncellendi!");
       } else {
@@ -1142,22 +1194,317 @@ export default function AdminEslestirmeEditPage() {
                 ></button>
               </div>
               <div className="modal-body">
+                {/* Veri Tipi Seçici */}
                 <div className="mb-3">
-                  <label htmlFor="fieldValue" className="form-label">
-                    JSON Değeri
-                  </label>
-                  <textarea
-                    id="fieldValue"
-                    className="form-control font-monospace"
-                    rows={15}
-                    value={fieldValue}
-                    onChange={(e) => setFieldValue(e.target.value)}
-                    style={{ fontSize: "0.875rem" }}
-                  />
-                  <small className="form-text text-muted">
-                    Geçerli bir JSON formatı giriniz.
-                  </small>
+                  <label className="form-label">Veri Tipi</label>
+                  <select
+                    className="form-select"
+                    value={editingValueType || ""}
+                    onChange={(e) => {
+                      const newType = e.target.value as typeof editingValueType;
+                      setEditingValueType(newType);
+                      if (newType === "string") setEditingValue("");
+                      else if (newType === "number") setEditingValue(0);
+                      else if (newType === "boolean") setEditingValue(false);
+                      else if (newType === "array") setArrayFormData([]);
+                      else if (newType === "object") setObjectFormData({});
+                    }}
+                  >
+                    <option value="string">Metin (String)</option>
+                    <option value="number">Sayı (Number)</option>
+                    <option value="boolean">Doğru/Yanlış (Boolean)</option>
+                    <option value="array">Liste (Array)</option>
+                    <option value="object">Nesne (Object)</option>
+                  </select>
                 </div>
+
+                {/* String Input */}
+                {editingValueType === "string" && (
+                  <div className="mb-3">
+                    <label htmlFor="stringValue" className="form-label">
+                      Metin Değeri
+                    </label>
+                    <textarea
+                      id="stringValue"
+                      className="form-control"
+                      rows={5}
+                      value={String(editingValue || "")}
+                      onChange={(e) => setEditingValue(e.target.value)}
+                      placeholder="Metin giriniz..."
+                    />
+                    <small className="form-text text-muted">
+                      Çok satırlı metin girebilirsiniz. JSON formatında bir değer girerseniz otomatik parse edilir.
+                    </small>
+                  </div>
+                )}
+
+                {/* Number Input */}
+                {editingValueType === "number" && (
+                  <div className="mb-3">
+                    <label htmlFor="numberValue" className="form-label">
+                      Sayı Değeri
+                    </label>
+                    <input
+                      type="number"
+                      id="numberValue"
+                      className="form-control"
+                      value={Number(editingValue) || 0}
+                      onChange={(e) => setEditingValue(Number(e.target.value))}
+                      placeholder="Sayı giriniz..."
+                    />
+                  </div>
+                )}
+
+                {/* Boolean Input */}
+                {editingValueType === "boolean" && (
+                  <div className="mb-3">
+                    <label className="form-label">Değer</label>
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="radio"
+                        name="booleanValue"
+                        id="booleanTrue"
+                        checked={Boolean(editingValue) === true}
+                        onChange={() => setEditingValue(true)}
+                      />
+                      <label className="form-check-label" htmlFor="booleanTrue">
+                        Doğru (True)
+                      </label>
+                    </div>
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="radio"
+                        name="booleanValue"
+                        id="booleanFalse"
+                        checked={Boolean(editingValue) === false}
+                        onChange={() => setEditingValue(false)}
+                      />
+                      <label className="form-check-label" htmlFor="booleanFalse">
+                        Yanlış (False)
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Array Input */}
+                {editingValueType === "array" && (
+                  <div className="mb-3">
+                    <label className="form-label">Liste Öğeleri</label>
+                    <div className="border rounded p-3" style={{ maxHeight: "400px", overflowY: "auto" }}>
+                      {arrayFormData.map((item, index) => (
+                        <div key={index} className="mb-2 d-flex gap-2 align-items-start">
+                          <span className="badge bg-secondary mt-2">{index}</span>
+                          <input
+                            type="text"
+                            className="form-control"
+                            value={typeof item === "object" ? JSON.stringify(item) : String(item)}
+                            onChange={(e) => {
+                              const newArray = [...arrayFormData];
+                              const val = e.target.value.trim();
+                              // JSON parse dene, başarısız olursa string olarak kullan
+                              try {
+                                newArray[index] = JSON.parse(val);
+                              } catch {
+                                newArray[index] = val;
+                              }
+                              setArrayFormData(newArray);
+                            }}
+                            placeholder={`Öğe ${index + 1}`}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => {
+                              setArrayFormData(arrayFormData.filter((_, i) => i !== index));
+                            }}
+                          >
+                            <i className="bi bi-trash"></i>
+                          </button>
+                        </div>
+                      ))}
+                      {arrayFormData.length === 0 && (
+                        <p className="text-muted text-center mb-0">Henüz öğe yok</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-primary mt-2"
+                      onClick={() => setArrayFormData([...arrayFormData, ""])}
+                    >
+                      <i className="bi bi-plus-circle me-1"></i>
+                      Öğe Ekle
+                    </button>
+                  </div>
+                )}
+
+                {/* Object Input */}
+                {editingValueType === "object" && (
+                  <div className="mb-3">
+                    <label className="form-label">Nesne Özellikleri</label>
+                    <div className="border rounded p-3 bg-light" style={{ maxHeight: "400px", overflowY: "auto" }}>
+                      {Object.keys(objectFormData).map((key) => {
+                        const value = objectFormData[key];
+                        const valueType = value === null || value === undefined ? "string" :
+                          typeof value === "boolean" ? "boolean" :
+                          typeof value === "number" ? "number" :
+                          Array.isArray(value) ? "array" :
+                          typeof value === "object" ? "object" : "string";
+
+                        return (
+                          <div key={key} className="mb-3 p-2 bg-white rounded border">
+                            <div className="d-flex align-items-center gap-2 mb-2">
+                              <strong className="text-primary" style={{ minWidth: "150px" }}>{key}:</strong>
+                              <select
+                                className="form-select form-select-sm"
+                                style={{ maxWidth: "120px" }}
+                                value={valueType}
+                                onChange={(e) => {
+                                  const newType = e.target.value;
+                                  const newObject = { ...objectFormData };
+                                  if (newType === "string") newObject[key] = "";
+                                  else if (newType === "number") newObject[key] = 0;
+                                  else if (newType === "boolean") newObject[key] = false;
+                                  else if (newType === "array") newObject[key] = [];
+                                  else if (newType === "object") newObject[key] = {};
+                                  setObjectFormData(newObject);
+                                }}
+                              >
+                                <option value="string">String</option>
+                                <option value="number">Number</option>
+                                <option value="boolean">Boolean</option>
+                                <option value="array">Array</option>
+                                <option value="object">Object</option>
+                              </select>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger ms-auto"
+                                onClick={() => {
+                                  const newObject = { ...objectFormData };
+                                  delete newObject[key];
+                                  setObjectFormData(newObject);
+                                }}
+                              >
+                                <i className="bi bi-trash"></i>
+                              </button>
+                            </div>
+                            <div>
+                              {valueType === "string" && (
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  value={String(value || "")}
+                                  onChange={(e) => {
+                                    setObjectFormData({ ...objectFormData, [key]: e.target.value });
+                                  }}
+                                  placeholder="Metin değeri..."
+                                />
+                              )}
+                              {valueType === "number" && (
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  value={Number(value) || 0}
+                                  onChange={(e) => {
+                                    setObjectFormData({ ...objectFormData, [key]: Number(e.target.value) });
+                                  }}
+                                  placeholder="Sayı değeri..."
+                                />
+                              )}
+                              {valueType === "boolean" && (
+                                <select
+                                  className="form-select"
+                                  value={String(Boolean(value))}
+                                  onChange={(e) => {
+                                    setObjectFormData({ ...objectFormData, [key]: e.target.value === "true" });
+                                  }}
+                                >
+                                  <option value="false">False</option>
+                                  <option value="true">True</option>
+                                </select>
+                              )}
+                              {valueType === "array" && (
+                                <textarea
+                                  className="form-control font-monospace"
+                                  rows={3}
+                                  value={JSON.stringify(Array.isArray(value) ? value : [], null, 2)}
+                                  onChange={(e) => {
+                                    try {
+                                      const parsed = JSON.parse(e.target.value);
+                                      if (Array.isArray(parsed)) {
+                                        setObjectFormData({ ...objectFormData, [key]: parsed });
+                                      }
+                                    } catch {
+                                      // Geçersiz JSON, değiştirme
+                                    }
+                                  }}
+                                  placeholder='["değer1", "değer2"]'
+                                />
+                              )}
+                              {valueType === "object" && (
+                                <textarea
+                                  className="form-control font-monospace"
+                                  rows={3}
+                                  value={JSON.stringify(typeof value === "object" && value !== null ? value : {}, null, 2)}
+                                  onChange={(e) => {
+                                    try {
+                                      const parsed = JSON.parse(e.target.value);
+                                      if (typeof parsed === "object" && !Array.isArray(parsed)) {
+                                        setObjectFormData({ ...objectFormData, [key]: parsed });
+                                      }
+                                    } catch {
+                                      // Geçersiz JSON, değiştirme
+                                    }
+                                  }}
+                                  placeholder='{"key": "value"}'
+                                />
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {Object.keys(objectFormData).length === 0 && (
+                        <p className="text-muted text-center mb-0 py-3">Henüz özellik yok</p>
+                      )}
+                    </div>
+                    <div className="d-flex gap-2 mt-2">
+                      <input
+                        ref={newObjectKeyInputRef}
+                        type="text"
+                        className="form-control"
+                        placeholder="Yeni özellik adı..."
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            const input = e.target as HTMLInputElement;
+                            const newKey = input.value.trim();
+                            if (newKey && !objectFormData[newKey]) {
+                              setObjectFormData({ ...objectFormData, [newKey]: "" });
+                              input.value = "";
+                            }
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-outline-primary"
+                        onClick={() => {
+                          const input = newObjectKeyInputRef.current;
+                          const newKey = input?.value.trim();
+                          if (newKey && !objectFormData[newKey]) {
+                            setObjectFormData({ ...objectFormData, [newKey]: "" });
+                            input.value = "";
+                          } else if (newKey && objectFormData[newKey]) {
+                            toast.warn("Bu özellik zaten mevcut!");
+                          }
+                        }}
+                      >
+                        <i className="bi bi-plus-circle me-1"></i>
+                        Özellik Ekle
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
                 <button
